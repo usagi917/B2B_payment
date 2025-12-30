@@ -6,8 +6,9 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
-A milestone-based escrow dApp for wagyu fattening workflows.
-Funds are released step-by-step by Buyer/Producer/Admin roles on testnet, with evidence hashed on-chain.
+A milestone-based escrow dApp for wagyu fattening workflows where funds are released step-by-step
+by Buyer/Producer/Admin roles. Evidence is hashed on-chain and the UI builds a timeline from events.
+This is B2B payment infrastructure, not an investment product, and is an unaudited demo for testnet use.
 
 ## Features
 
@@ -15,13 +16,14 @@ Funds are released step-by-step by Buyer/Producer/Admin roles on testnet, with e
 - Role-based actions: Lock, Submit, Approve, Cancel
 - Evidence hashing and event timeline visualization
 - Testnet support for Sepolia, Base Sepolia, and Polygon Amoy
+- Frontend-only architecture with Next.js, viem, and Tailwind
 
 ## Requirements
 
-- Node.js 18.17+ (compatible with Next.js 15)
+- Node.js (compatible with Next.js 15)
 - pnpm
 - EVM wallet such as MetaMask
-- RPC endpoint (Alchemy, etc.)
+- RPC endpoint
 - Deployed ERC20 token and MilestoneEscrow contract
 
 ## Installation
@@ -35,7 +37,7 @@ pnpm install
 
 1. Go to `apps/web`
 2. Copy `.env.example` to `.env.local`
-3. Set environment variables (RPC URL, Chain ID, contract addresses)
+3. Set RPC URL, Chain ID, and contract addresses
 4. Run `pnpm dev`
 5. Open `http://localhost:3000`
 
@@ -43,11 +45,11 @@ pnpm install
 
 ### dApp
 
-1. Connect MetaMask and switch to the target network
+1. Connect a wallet and switch to the target network
 2. Buyer locks the total amount (ERC20 approve required first)
-3. Producer submits a milestone with evidence
+3. Producer submits a milestone with evidence (evidence is hashed)
 4. Buyer approves and releases the milestone amount
-5. Admin can cancel and refund if needed
+5. Admin can cancel and refund remaining funds if needed
 
 ### Milestone Schedule
 
@@ -61,7 +63,7 @@ pnpm install
 | E6 | Receipt and inspection | 20% |
 | **Total** | | **100%** |
 
-### Smart Contract Deployment (Remix)
+### Smart Contract Deployment (Example: Remix)
 
 1. Open https://remix.ethereum.org
 2. Create and paste `contracts/MilestoneEscrow.sol` and `contracts/MockERC20.sol`
@@ -74,28 +76,22 @@ pnpm install
    - `_admin`: Admin address
    - `_totalAmount`: Total amount (smallest unit)
 
-## Important Notes
-
-- This is B2B payment infrastructure, not an investment product
-- Contracts are not audited; use testnet only
-- Do not use with real funds
-
 ## User Flow (Mermaid)
 
 ```mermaid
 graph TD
-  A[User: Open App] --> B[System: Load Contract and Timeline]
-  B --> C{Wallet Connected?}
-  C -->|No| D[User: Connect Wallet]
-  D --> E[System: Request Accounts and Check Chain]
+  A[User: Open dApp] --> B[System: Load config and contract data]
+  B --> C{Wallet connected?}
+  C -->|No| D[User: Connect wallet]
+  D --> E[System: Request accounts<br/>Check chain]
   E --> C
-  C -->|Yes| F[User: Choose Action<br/>Lock or Submit or Approve or Cancel]
-  F --> G[System: Send Transaction]
-  G --> H{Tx Success?}
-  H -->|No| I[System: Show Error and Retry]
+  C -->|Yes| F[User: Choose action<br/>Lock Submit Approve Cancel]
+  F --> G[System: Build transaction<br/>Hash evidence]
+  G --> H{Transaction confirmed?}
+  H -->|No| I[System: Show error and retry]
   I --> F
-  H -->|Yes| J[System: Update Summary and Timeline]
-  J --> K[User: View Updated Status]
+  H -->|Yes| J[System: Refresh summary<br/>Refresh timeline]
+  J --> K[User: View updated state]
 ```
 
 ## System Architecture (Mermaid)
@@ -108,16 +104,17 @@ graph LR
   end
   subgraph Infrastructure
     RPC[RPC Provider]
+    Explorer[Block Explorer optional]
   end
   subgraph Blockchain
     Escrow[Milestone Escrow]
     Token[ERC20 Token]
   end
-  UI -->|Read and View| RPC
-  Wallet -->|Sign Transactions| RPC
-  RPC -->|Contract Calls| Escrow
-  RPC -->|Token Calls| Token
-  UI -.->|Tx Link| Explorer[Block Explorer optional]
+  UI -->|Read logs and state| RPC
+  Wallet -->|Sign and send tx| RPC
+  RPC -->|Contract calls| Escrow
+  RPC -->|Token calls| Token
+  UI -.->|Tx link| Explorer
 ```
 
 ## Directory Structure
@@ -125,15 +122,15 @@ graph LR
 ```
 hackson/
 ├── apps/
-│   └── web/                # Next.js dApp
-│       ├── src/app/         # App router UI
-│       ├── src/components/  # UI components
-│       └── src/lib/         # viem + hooks + config
-├── contracts/               # Solidity smart contracts
+│   └── web/                 # Next.js dApp
+│       ├── src/app/          # App router UI
+│       ├── src/components/   # UI components
+│       ├── src/lib/          # viem hooks + config
+│       ├── .env.example      # Environment template
+│       └── package.json
+├── contracts/                # Solidity smart contracts
 │   ├── MilestoneEscrow.sol
 │   └── MockERC20.sol
-├── idea.md
-├── plan.md
 ├── README.md
 ├── README.en.md
 └── LICENSE
@@ -152,7 +149,7 @@ NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE=
 ```
 
 - `NEXT_PUBLIC_RPC_URL`: RPC URL for the target network
-- `NEXT_PUBLIC_CHAIN_ID`: Chain ID (e.g., Sepolia 11155111)
+- `NEXT_PUBLIC_CHAIN_ID`: Chain ID (e.g., Sepolia 11155111 / Base Sepolia 84532 / Polygon Amoy 80002)
 - `NEXT_PUBLIC_CONTRACT_ADDRESS`: MilestoneEscrow address
 - `NEXT_PUBLIC_TOKEN_ADDRESS`: ERC20 token address
 - `NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE`: Base URL for tx links (optional)

@@ -1,11 +1,14 @@
 "use client";
 
 import type { Address } from "viem";
+import { useI18n } from "@/lib/i18n";
+import type { UserRole } from "@/lib/types";
 
 interface ConnectWalletProps {
   address: Address | null;
   isConnecting: boolean;
   error: string | null;
+  userRole: UserRole;
   onConnect: () => void;
   onDisconnect: () => void;
 }
@@ -14,40 +17,159 @@ export function ConnectWallet({
   address,
   isConnecting,
   error,
+  userRole,
   onConnect,
   onDisconnect,
 }: ConnectWalletProps) {
+  const { t } = useI18n();
+
   const shortenAddress = (addr: Address) =>
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
+  const roleConfig: Record<UserRole, { label: string; badgeClass: string; icon: string }> = {
+    buyer: {
+      label: t("buyer"),
+      badgeClass: "badge-buyer",
+      icon: "💰",
+    },
+    producer: {
+      label: t("producer"),
+      badgeClass: "badge-producer",
+      icon: "🐄",
+    },
+    admin: {
+      label: t("admin"),
+      badgeClass: "badge-admin",
+      icon: "🔐",
+    },
+    none: {
+      label: t("observer"),
+      badgeClass: "badge-pending",
+      icon: "👁",
+    },
+  };
+
+  const { label: roleLabel, badgeClass, icon: roleIcon } = roleConfig[userRole];
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-      <h2 className="text-lg font-semibold mb-3">Wallet</h2>
+    <div className="card p-5 animate-fade-in">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-[var(--color-bg)] flex items-center justify-center">
+          <svg
+            className="w-4 h-4 text-[var(--color-text-secondary)]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+            />
+          </svg>
+        </div>
+        <h2 className="font-semibold text-[var(--color-text)]">{t("wallet")}</h2>
+      </div>
 
       {error && (
-        <div className="text-red-500 text-sm mb-2">{error}</div>
+        <div className="mb-4 p-3 rounded-lg bg-[var(--color-error)]/10 border border-[var(--color-error)]/20">
+          <p className="text-sm text-[var(--color-error)]">{error}</p>
+        </div>
       )}
 
       {address ? (
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-green-500 mr-2">●</span>
-            <span className="font-mono text-sm">{shortenAddress(address)}</span>
+        <div className="space-y-4">
+          {/* Connected Status */}
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-bg)]">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-buyer)] to-[var(--color-producer)] flex items-center justify-center text-white font-bold">
+                {address.slice(2, 4).toUpperCase()}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[var(--color-success)] rounded-full border-2 border-[var(--color-bg-card)]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-mono text-sm font-medium truncate">
+                {shortenAddress(address)}
+              </p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className={`badge ${badgeClass}`}>
+                  <span>{roleIcon}</span>
+                  <span>{roleLabel}</span>
+                </span>
+              </div>
+            </div>
           </div>
+
+          {/* Disconnect Button */}
           <button
             onClick={onDisconnect}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+            className="btn btn-ghost w-full text-sm"
           >
-            Disconnect
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            {t("disconnect")}
           </button>
         </div>
       ) : (
         <button
           onClick={onConnect}
           disabled={isConnecting}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn btn-primary w-full"
         >
-          {isConnecting ? "Connecting..." : "Connect MetaMask"}
+          {isConnecting ? (
+            <>
+              <svg
+                className="w-4 h-4 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              {t("connecting")}
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-5 h-5"
+                viewBox="0 0 40 40"
+                fill="none"
+              >
+                <path
+                  d="M37.5 20c0 9.665-7.835 17.5-17.5 17.5S2.5 29.665 2.5 20 10.335 2.5 20 2.5 37.5 10.335 37.5 20z"
+                  fill="#F6851B"
+                />
+                <path
+                  d="M32.5 15l-10 5-2.5-7.5L32.5 15zM7.5 15l10 5 2.5-7.5L7.5 15zM27.5 27.5L20 30l-7.5-2.5 2.5-5 5 2.5 5-2.5 2.5 5z"
+                  fill="white"
+                />
+              </svg>
+              {t("connectWallet")}
+            </>
+          )}
         </button>
       )}
     </div>

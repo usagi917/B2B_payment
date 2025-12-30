@@ -2,117 +2,141 @@
 
 import type { Milestone } from "@/lib/types";
 import { MilestoneState } from "@/lib/types";
+import { useI18n, type TranslationKey } from "@/lib/i18n";
 
 interface MilestonesListProps {
   milestones: Milestone[];
 }
 
-const MILESTONE_DESCRIPTIONS: Record<string, string> = {
-  E1: "契約・個体登録",
-  E2: "初期検疫・導入",
-  E3_01: "月次肥育記録 1",
-  E3_02: "月次肥育記録 2",
-  E3_03: "月次肥育記録 3",
-  E3_04: "月次肥育記録 4",
-  E3_05: "月次肥育記録 5",
-  E3_06: "月次肥育記録 6",
-  E4: "出荷準備",
-  E5: "出荷",
-  E6: "受領・検収",
-};
-
-const STATE_LABELS: Record<MilestoneState, { label: string; color: string }> = {
-  [MilestoneState.PENDING]: { label: "Pending", color: "bg-gray-200 text-gray-700" },
-  [MilestoneState.SUBMITTED]: { label: "Submitted", color: "bg-yellow-200 text-yellow-800" },
-  [MilestoneState.APPROVED]: { label: "Approved", color: "bg-green-200 text-green-800" },
-};
-
 export function MilestonesList({ milestones }: MilestonesListProps) {
+  const { t } = useI18n();
+
   const formatTimestamp = (ts: bigint) => {
     if (ts === 0n) return "-";
-    return new Date(Number(ts) * 1000).toLocaleString("ja-JP");
+    return new Date(Number(ts) * 1000).toLocaleString();
   };
 
-  const shortenHash = (hash: string) => {
-    if (hash === "0x0000000000000000000000000000000000000000000000000000000000000000") {
-      return "-";
+  const getStateConfig = (state: MilestoneState) => {
+    switch (state) {
+      case MilestoneState.PENDING:
+        return { label: t("pending"), class: "badge-pending", icon: "○" };
+      case MilestoneState.SUBMITTED:
+        return { label: t("submitted"), class: "badge-submitted", icon: "◐" };
+      case MilestoneState.APPROVED:
+        return { label: t("approved"), class: "badge-approved", icon: "●" };
     }
-    return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
   };
+
+  const approvedCount = milestones.filter((m) => m.state === MilestoneState.APPROVED).length;
+  const totalCount = milestones.length;
+  const progress = totalCount > 0 ? (approvedCount / totalCount) * 100 : 0;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-      <h2 className="text-lg font-semibold mb-3">Milestones</h2>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-left py-2 px-2">#</th>
-              <th className="text-left py-2 px-2">Code</th>
-              <th className="text-left py-2 px-2">Description</th>
-              <th className="text-right py-2 px-2">Rate</th>
-              <th className="text-center py-2 px-2">Status</th>
-              <th className="text-left py-2 px-2">Evidence</th>
-              <th className="text-left py-2 px-2">Submitted</th>
-              <th className="text-left py-2 px-2">Approved</th>
-            </tr>
-          </thead>
-          <tbody>
-            {milestones.map((m, index) => {
-              const { label, color } = STATE_LABELS[m.state];
-              return (
-                <tr
-                  key={index}
-                  className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <td className="py-2 px-2 text-gray-500">{index}</td>
-                  <td className="py-2 px-2 font-mono font-medium">{m.code}</td>
-                  <td className="py-2 px-2 text-gray-600 dark:text-gray-400">
-                    {MILESTONE_DESCRIPTIONS[m.code] || m.code}
-                  </td>
-                  <td className="py-2 px-2 text-right">{Number(m.bps) / 100}%</td>
-                  <td className="py-2 px-2 text-center">
-                    <span className={`px-2 py-1 rounded text-xs ${color}`}>
-                      {label}
-                    </span>
-                  </td>
-                  <td className="py-2 px-2 font-mono text-xs">
-                    {shortenHash(m.evidenceHash)}
-                  </td>
-                  <td className="py-2 px-2 text-xs text-gray-500">
-                    {formatTimestamp(m.submittedAt)}
-                  </td>
-                  <td className="py-2 px-2 text-xs text-gray-500">
-                    {formatTimestamp(m.approvedAt)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <div className="card p-5 animate-fade-in">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[var(--color-bg)] flex items-center justify-center">
+            <svg
+              className="w-4 h-4 text-[var(--color-text-secondary)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+          </div>
+          <h2 className="font-semibold text-[var(--color-text)]">{t("milestones")}</h2>
+        </div>
+        <span className="text-sm text-[var(--color-text-muted)]">
+          {approvedCount}/{totalCount}
+        </span>
       </div>
 
-      {/* Progress summary */}
-      <div className="mt-4 flex gap-4 text-sm">
-        <div>
-          <span className="text-gray-500">Approved: </span>
-          <span className="font-medium">
-            {milestones.filter((m) => m.state === MilestoneState.APPROVED).length}
-          </span>
+      {/* Progress Bar */}
+      <div className="mb-6">
+        <div className="milestone-progress">
+          <div
+            className="milestone-progress-fill"
+            style={{ width: `${progress}%` }}
+          />
         </div>
-        <div>
-          <span className="text-gray-500">Submitted: </span>
-          <span className="font-medium">
-            {milestones.filter((m) => m.state === MilestoneState.SUBMITTED).length}
-          </span>
-        </div>
-        <div>
-          <span className="text-gray-500">Pending: </span>
-          <span className="font-medium">
-            {milestones.filter((m) => m.state === MilestoneState.PENDING).length}
-          </span>
-        </div>
+      </div>
+
+      {/* Milestones Grid */}
+      <div className="space-y-2">
+        {milestones.map((m, index) => {
+          const { label, class: badgeClass, icon } = getStateConfig(m.state);
+          const description = t(m.code as TranslationKey) || m.code;
+
+          return (
+            <div
+              key={index}
+              className={`p-3 rounded-xl border transition-all ${
+                m.state === MilestoneState.APPROVED
+                  ? "bg-[var(--color-success)]/5 border-[var(--color-success)]/20"
+                  : m.state === MilestoneState.SUBMITTED
+                  ? "bg-[var(--color-warning)]/5 border-[var(--color-warning)]/20"
+                  : "bg-[var(--color-bg)] border-transparent"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {/* Status Icon */}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    m.state === MilestoneState.APPROVED
+                      ? "bg-[var(--color-success)]/20 text-[var(--color-success)]"
+                      : m.state === MilestoneState.SUBMITTED
+                      ? "bg-[var(--color-warning)]/20 text-[var(--color-warning)]"
+                      : "bg-[var(--color-border)] text-[var(--color-text-muted)]"
+                  }`}
+                >
+                  {icon}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-semibold text-[var(--color-text)]">
+                      {m.code}
+                    </span>
+                    <span className="text-xs text-[var(--color-text-muted)]">
+                      ({Number(m.bps) / 100}%)
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-secondary)] truncate">
+                    {description}
+                  </p>
+                </div>
+
+                {/* Badge */}
+                <span className={`badge ${badgeClass} hidden sm:inline-flex`}>
+                  {label}
+                </span>
+              </div>
+
+              {/* Timestamps (if submitted or approved) */}
+              {m.state !== MilestoneState.PENDING && (
+                <div className="mt-2 pt-2 border-t border-[var(--color-border)] flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
+                  {m.submittedAt > 0n && (
+                    <span>
+                      {t("submittedAt")}: {formatTimestamp(m.submittedAt)}
+                    </span>
+                  )}
+                  {m.approvedAt > 0n && (
+                    <span>
+                      {t("approvedAt")}: {formatTimestamp(m.approvedAt)}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
