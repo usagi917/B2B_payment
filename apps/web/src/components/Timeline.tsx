@@ -30,37 +30,57 @@ export function Timeline({
       case "Locked":
         return {
           label: t("eventLocked"),
-          icon: "🔒",
-          color: "bg-[var(--color-success)]",
-          borderColor: "border-[var(--color-success)]",
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          ),
+          bgColor: "bg-[var(--color-success)]",
+          borderColor: "border-l-[var(--color-success)]",
         };
       case "Submitted":
         return {
           label: t("eventSubmitted"),
-          icon: "📝",
-          color: "bg-[var(--color-warning)]",
-          borderColor: "border-[var(--color-warning)]",
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+          bgColor: "bg-[var(--color-warning)]",
+          borderColor: "border-l-[var(--color-warning)]",
         };
       case "Released":
         return {
           label: t("eventReleased"),
-          icon: "💰",
-          color: "bg-[var(--color-buyer)]",
-          borderColor: "border-[var(--color-buyer)]",
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+          bgColor: "bg-[var(--color-buyer)]",
+          borderColor: "border-l-[var(--color-buyer)]",
         };
       case "Cancelled":
         return {
           label: t("eventCancelled"),
-          icon: "❌",
-          color: "bg-[var(--color-error)]",
-          borderColor: "border-[var(--color-error)]",
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ),
+          bgColor: "bg-[var(--color-error)]",
+          borderColor: "border-l-[var(--color-error)]",
         };
       default:
         return {
           label: type,
-          icon: "📌",
-          color: "bg-[var(--color-text-muted)]",
-          borderColor: "border-[var(--color-text-muted)]",
+          icon: (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ),
+          bgColor: "bg-[var(--color-text-muted)]",
+          borderColor: "border-l-[var(--color-text-muted)]",
         };
     }
   };
@@ -68,8 +88,8 @@ export function Timeline({
   if (isLoading) {
     return (
       <div className="card p-5 animate-fade-in">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="skeleton w-8 h-8 rounded-lg" />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="skeleton w-9 h-9 rounded-lg" />
           <div className="skeleton w-24 h-5" />
         </div>
         <div className="space-y-4">
@@ -90,13 +110,13 @@ export function Timeline({
   if (error) {
     return (
       <div className="card p-5 animate-fade-in">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-[var(--color-error)]/10 flex items-center justify-center">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-lg bg-[#FFEBEE] flex items-center justify-center">
             <svg className="w-4 h-4 text-[var(--color-error)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2 className="font-semibold text-[var(--color-text)]">{t("timeline")}</h2>
+          <h2 className="section-title">{t("timeline")}</h2>
         </div>
         <p className="text-sm text-[var(--color-error)]">{error}</p>
       </div>
@@ -105,8 +125,8 @@ export function Timeline({
 
   return (
     <div className="card p-5 animate-fade-in">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-[var(--color-bg)] flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-lg surface flex items-center justify-center">
           <svg
             className="w-4 h-4 text-[var(--color-text-secondary)]"
             fill="none"
@@ -121,12 +141,12 @@ export function Timeline({
             />
           </svg>
         </div>
-        <h2 className="font-semibold text-[var(--color-text)]">{t("timeline")}</h2>
+        <h2 className="section-title">{t("timeline")}</h2>
       </div>
 
       {events.length === 0 ? (
         <div className="text-center py-8">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--color-bg)] flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full surface flex items-center justify-center">
             <svg className="w-6 h-6 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -134,25 +154,25 @@ export function Timeline({
           <p className="text-sm text-[var(--color-text-muted)]">{t("noEvents")}</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {[...events].reverse().map((event, index) => {
-            const { label, icon, color, borderColor } = getEventConfig(event.type);
+            const { label, icon, bgColor, borderColor } = getEventConfig(event.type);
 
             return (
               <div key={`${event.txHash}-${index}`} className="timeline-item">
-                <div className={`timeline-dot ${color} text-white`}>
+                <div className={`timeline-dot ${bgColor} text-white`}>
                   {icon}
                 </div>
 
-                <div className={`p-4 rounded-xl border-l-4 ${borderColor} bg-[var(--color-bg)]`}>
+                <div className={`p-3 rounded-xl bg-[var(--color-surface-variant)] border-l-4 ${borderColor}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-[var(--color-text)]">{label}</span>
-                    <span className="text-xs text-[var(--color-text-muted)]">
+                    <span className="font-medium text-sm text-[var(--color-text)]">{label}</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)]">
                       {t("block")} #{event.blockNumber.toString()}
                     </span>
                   </div>
 
-                  <div className="space-y-1 text-sm">
+                  <div className="space-y-1 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="text-[var(--color-text-muted)]">{t("actor")}:</span>
                       <span className="font-mono text-[var(--color-text-secondary)]">
@@ -219,12 +239,12 @@ export function Timeline({
                           href={getTxUrl(event.txHash)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-mono text-xs text-[var(--color-buyer)] hover:underline"
+                          className="font-mono text-[10px] text-[var(--color-primary)] hover:underline"
                         >
                           {shortenHash(event.txHash)} →
                         </a>
                       ) : (
-                        <span className="font-mono text-xs text-[var(--color-text-secondary)]">
+                        <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">
                           {shortenHash(event.txHash)}
                         </span>
                       )}

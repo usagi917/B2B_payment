@@ -26,35 +26,31 @@ export function ConnectWallet({
   const shortenAddress = (addr: Address) =>
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-  const roleConfig: Record<UserRole, { label: string; badgeClass: string; icon: string }> = {
+  const roleConfig: Record<UserRole, { label: string; badgeClass: string }> = {
     buyer: {
       label: t("buyer"),
       badgeClass: "badge-buyer",
-      icon: "💰",
     },
     producer: {
       label: t("producer"),
       badgeClass: "badge-producer",
-      icon: "🐄",
     },
     admin: {
       label: t("admin"),
       badgeClass: "badge-admin",
-      icon: "🔐",
     },
     none: {
       label: t("observer"),
       badgeClass: "badge-pending",
-      icon: "👁",
     },
   };
 
-  const { label: roleLabel, badgeClass, icon: roleIcon } = roleConfig[userRole];
+  const { label: roleLabel, badgeClass } = roleConfig[userRole];
 
   return (
     <div className="card p-5 animate-fade-in">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-[var(--color-bg)] flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-lg surface flex items-center justify-center">
           <svg
             className="w-4 h-4 text-[var(--color-text-secondary)]"
             fill="none"
@@ -69,11 +65,14 @@ export function ConnectWallet({
             />
           </svg>
         </div>
-        <h2 className="font-semibold text-[var(--color-text)]">{t("wallet")}</h2>
+        <div>
+          <h2 className="section-title">{t("wallet")}</h2>
+          <p className="section-subtitle">{t("connectRoleWallet")}</p>
+        </div>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-[var(--color-error)]/10 border border-[var(--color-error)]/20">
+        <div className="mb-4 p-3 rounded-lg bg-[#FFEBEE]">
           <p className="text-sm text-[var(--color-error)]">{error}</p>
         </div>
       )}
@@ -81,21 +80,20 @@ export function ConnectWallet({
       {address ? (
         <div className="space-y-4">
           {/* Connected Status */}
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-bg)]">
+          <div className="flex items-center gap-3 p-3 surface rounded-lg">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-buyer)] to-[var(--color-producer)] flex items-center justify-center text-white font-bold">
+              <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white font-semibold text-sm">
                 {address.slice(2, 4).toUpperCase()}
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[var(--color-success)] rounded-full border-2 border-[var(--color-bg-card)]" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[var(--color-success)] rounded-full border-2 border-[var(--color-surface)]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-mono text-sm font-medium truncate">
+              <p className="font-mono text-sm font-medium truncate text-[var(--color-text)]">
                 {shortenAddress(address)}
               </p>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className={`badge ${badgeClass}`}>
-                  <span>{roleIcon}</span>
-                  <span>{roleLabel}</span>
+                  {roleLabel}
                 </span>
               </div>
             </div>

@@ -10,6 +10,14 @@ export const translations = {
     appTitle: "和牛マイルストーンエスクロー",
     appSubtitle: "B2B肥育工程決済インフラ",
 
+    // Hero
+    heroEyebrow: "信頼の儀式",
+    heroTitle: "証跡が、支払いを動かす。",
+    heroSubtitle: "時間と合意を一枚のレジャーに束ねる。透明な証跡が、価値の解放を静かに導く。",
+    heroPillTrust: "信頼",
+    heroPillEvidence: "証跡",
+    heroPillRelease: "解放",
+
     // Wallet
     wallet: "ウォレット",
     connectWallet: "ウォレット接続",
@@ -106,6 +114,15 @@ export const translations = {
       "監査未実施のコントラクトです（デモ用）",
     ],
 
+    // NFT
+    refresh: "更新",
+    attributes: "属性",
+
+    // Philosophy
+    philosophyTitle: "設計哲学",
+    philosophyQuote: "支払いとは、信頼の時間軸である。",
+    philosophyBody: "条件ではなく証跡。合意は透明に、解放は静かに。人と時間の関係をそのまま保存するための設計です。",
+
     // Footer
     footerDemo: "デモ・テストネット専用",
     footerWarning: "監査未実施のため実資金での運用禁止",
@@ -114,6 +131,14 @@ export const translations = {
     // Header
     appTitle: "Wagyu Milestone Escrow",
     appSubtitle: "B2B Cattle Fattening Payment Infrastructure",
+
+    // Hero
+    heroEyebrow: "RITUAL OF TRUST",
+    heroTitle: "Proof moves value.",
+    heroSubtitle: "Bind time and agreement into a single ledger. Transparent evidence guides the release of value, quietly and precisely.",
+    heroPillTrust: "Trust",
+    heroPillEvidence: "Evidence",
+    heroPillRelease: "Release",
 
     // Wallet
     wallet: "Wallet",
@@ -210,6 +235,15 @@ export const translations = {
       "Milestones are evidence logs, not payment conditions",
       "Unaudited contract (demo only)",
     ],
+
+    // NFT
+    refresh: "Refresh",
+    attributes: "Attributes",
+
+    // Philosophy
+    philosophyTitle: "Design Philosophy",
+    philosophyQuote: "Payment is the time axis of trust.",
+    philosophyBody: "Not conditions, but evidence. Agreement stays transparent, release stays calm. A design that preserves the relationship between people and time.",
 
     // Footer
     footerDemo: "Demo / Testnet Only",
