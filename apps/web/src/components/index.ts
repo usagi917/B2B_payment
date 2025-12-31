@@ -5,3 +5,4 @@ export { Actions } from "./Actions";
 export { MilestonesList } from "./MilestonesList";
 export { Timeline } from "./Timeline";
 export { NFTCard } from "./NFTCard";
+export { HeroNFT } from "./HeroNFT";

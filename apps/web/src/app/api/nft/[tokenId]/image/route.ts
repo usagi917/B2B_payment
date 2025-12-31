@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, http, type Address, formatUnits } from "viem";
+import { createPublicClient, http, type Address } from "viem";
 import { baseSepolia } from "viem/chains";
 import { ESCROW_ABI, ERC20_ABI } from "@/lib/abi";
+import { SUPPORTED_CHAINS } from "@/lib/config";
 
 type MilestoneState = 0 | 1 | 2; // PENDING, SUBMITTED, APPROVED
 
@@ -10,6 +11,32 @@ interface Milestone {
   bps: bigint;
   state: MilestoneState;
 }
+
+const NFT_ABI = [
+  {
+    type: "function",
+    name: "escrowContracts",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+  },
+] as const;
+
+const resolveChain = () => {
+  const chainId = Number(
+    process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || baseSepolia.id
+  );
+  return SUPPORTED_CHAINS[chainId] ?? baseSepolia;
+};
+
+const formatTokenAmount = (amount: bigint, decimals: number) => {
+  if (decimals <= 0) return amount.toString();
+  const divisor = 10n ** BigInt(decimals);
+  return (amount / divisor).toString();
+};
+
+const calcProgressPercent = (released: bigint, total: bigint) =>
+  total > 0n ? Number((released * 100n) / total) : 0;
 
 function generateSVG(
   tokenId: string,
@@ -155,19 +182,37 @@ export async function GET(
 
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
     const escrowAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as Address;
+    const nftContractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS as Address;
 
     if (!rpcUrl || !escrowAddress) {
       return new NextResponse("Missing configuration", { status: 500 });
     }
 
     const client = createPublicClient({
-      chain: baseSepolia,
+      chain: resolveChain(),
       transport: http(rpcUrl),
     });
 
+    let targetEscrow = escrowAddress;
+    if (nftContractAddress) {
+      try {
+        const escrowFromNft = await client.readContract({
+          address: nftContractAddress,
+          abi: NFT_ABI,
+          functionName: "escrowContracts",
+          args: [BigInt(tokenIdNum)],
+        });
+        if (escrowFromNft !== "0x0000000000000000000000000000000000000000") {
+          targetEscrow = escrowFromNft;
+        }
+      } catch {
+        // Fall back to env contract address
+      }
+    }
+
     // Get contract summary
     const summary = await client.readContract({
-      address: escrowAddress,
+      address: targetEscrow,
       abi: ESCROW_ABI,
       functionName: "getSummary",
     });
@@ -203,7 +248,7 @@ export async function GET(
     const milestones: Milestone[] = [];
     for (let i = 0; i < Number(milestonesCount); i++) {
       const m = await client.readContract({
-        address: escrowAddress,
+        address: targetEscrow,
         abi: ESCROW_ABI,
         functionName: "milestone",
         args: [BigInt(i)],
@@ -218,7 +263,7 @@ export async function GET(
     // Calculate stats
     const approvedCount = milestones.filter((m) => m.state === 2).length;
     const submittedCount = milestones.filter((m) => m.state === 1).length;
-    const progressPercent = Math.round((Number(releasedAmount) / Number(totalAmount)) * 100) || 0;
+    const progressPercent = calcProgressPercent(releasedAmount, totalAmount);
 
     // Determine status
     let status = "Not Locked";
@@ -238,8 +283,8 @@ export async function GET(
       tokenId,
       milestones,
       progressPercent,
-      formatUnits(releasedAmount, decimals),
-      formatUnits(totalAmount, decimals),
+      formatTokenAmount(releasedAmount, decimals),
+      formatTokenAmount(totalAmount, decimals),
       symbol,
       status,
       cancelled

@@ -260,7 +260,22 @@ contract MilestoneEscrow is ReentrancyGuard {
         if (index >= milestones.length) revert InvalidMilestoneIndex();
         if (milestones[index].state != MilestoneState.SUBMITTED) revert MilestoneNotSubmitted();
 
+        uint256 remaining = lockedAmount - releasedAmount;
         uint256 releaseAmount = (totalAmount * milestones[index].bps) / 10000;
+
+        bool isLastApproval = true;
+        for (uint256 i = 0; i < milestones.length; i++) {
+            if (i == index) continue;
+            if (milestones[i].state != MilestoneState.APPROVED) {
+                isLastApproval = false;
+                break;
+            }
+        }
+        if (isLastApproval) {
+            releaseAmount = remaining;
+        } else if (releaseAmount > remaining) {
+            releaseAmount = remaining;
+        }
 
         // State update first (CEI pattern)
         milestones[index].state = MilestoneState.APPROVED;

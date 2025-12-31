@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPublicClient, http, type Address, formatUnits } from "viem";
+import { createPublicClient, http, type Address } from "viem";
 import { baseSepolia } from "viem/chains";
 import { ESCROW_ABI, ERC20_ABI } from "@/lib/abi";
+import { SUPPORTED_CHAINS } from "@/lib/config";
 
 // NFT Contract ABI (minimal for escrowContracts lookup)
 const NFT_ABI = [
@@ -21,6 +22,22 @@ interface Milestone {
   bps: bigint;
   state: MilestoneState;
 }
+
+const resolveChain = () => {
+  const chainId = Number(
+    process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || baseSepolia.id
+  );
+  return SUPPORTED_CHAINS[chainId] ?? baseSepolia;
+};
+
+const formatTokenAmount = (amount: bigint, decimals: number) => {
+  if (decimals <= 0) return amount.toString();
+  const divisor = 10n ** BigInt(decimals);
+  return (amount / divisor).toString();
+};
+
+const calcProgressPercent = (released: bigint, total: bigint) =>
+  total > 0n ? Number((released * 100n) / total) : 0;
 
 export async function GET(
   request: NextRequest,
@@ -43,7 +60,7 @@ export async function GET(
     }
 
     const client = createPublicClient({
-      chain: baseSepolia,
+      chain: resolveChain(),
       transport: http(rpcUrl),
     });
 
@@ -121,7 +138,7 @@ export async function GET(
     const approvedCount = milestones.filter((m) => m.state === 2).length;
     const submittedCount = milestones.filter((m) => m.state === 1).length;
     const pendingCount = milestones.filter((m) => m.state === 0).length;
-    const progressPercent = Math.round((Number(releasedAmount) / Number(totalAmount)) * 100) || 0;
+    const progressPercent = calcProgressPercent(releasedAmount, totalAmount);
 
     // Determine status
     let status = "Not Locked";
@@ -144,8 +161,8 @@ export async function GET(
       { trait_type: "Milestones Approved", value: approvedCount },
       { trait_type: "Milestones Submitted", value: submittedCount },
       { trait_type: "Milestones Pending", value: pendingCount },
-      { trait_type: "Total Amount", value: `${formatUnits(totalAmount, decimals)} ${symbol}` },
-      { trait_type: "Released Amount", value: `${formatUnits(releasedAmount, decimals)} ${symbol}` },
+      { trait_type: "Total Amount", value: `${formatTokenAmount(totalAmount, decimals)} ${symbol}` },
+      { trait_type: "Released Amount", value: `${formatTokenAmount(releasedAmount, decimals)} ${symbol}` },
       { trait_type: "Token", value: symbol },
     ];
 

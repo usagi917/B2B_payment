@@ -52,3 +52,6 @@ typechain/
 
 # Misc
 *.tgz
+
+plan.md
+infra.md

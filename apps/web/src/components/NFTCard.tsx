@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
 
 interface NFTCardProps {
@@ -138,34 +139,17 @@ export function NFTCard({ tokenId = 1 }: NFTCardProps) {
         <>
           {/* NFT Image */}
           <div className="relative rounded-xl overflow-hidden bg-[var(--color-surface-variant)] mb-4">
-            <img
+            <Image
               src={`${metadata.image}?t=${refreshKey}`}
               alt={metadata.name}
-              className="w-full"
+              width={400}
+              height={500}
+              sizes="(max-width: 1280px) 100vw, 50vw"
+              className="w-full h-auto"
+              unoptimized
             />
           </div>
 
-          {/* Attributes */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
-              {t("attributes")}
-            </h3>
-            <div className="grid grid-cols-2 gap-2">
-              {metadata.attributes.slice(0, 6).map((attr) => (
-                <div
-                  key={attr.trait_type}
-                  className="p-2 rounded-lg bg-[var(--color-surface-variant)]"
-                >
-                  <div className="text-[10px] text-[var(--color-text-muted)]">
-                    {attr.trait_type}
-                  </div>
-                  <div className="text-xs font-medium text-[var(--color-text)] truncate">
-                    {attr.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </>
       )}
     </div>

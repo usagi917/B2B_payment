@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { type Address, type Hash, formatUnits, parseUnits, keccak256, toBytes } from "viem";
+import { type Address, type Hash, keccak256, toBytes } from "viem";
 import { createClient, createWallet, config, getChain } from "./config";
 import { ESCROW_ABI, ERC20_ABI } from "./abi";
 import type { ContractSummary, Milestone, MilestoneState, TimelineEvent, UserRole } from "./types";
@@ -103,7 +103,7 @@ export function useWallet() {
 }
 
 // Contract data hook
-export function useContractData(address: Address | null) {
+export function useContractData() {
   const [summary, setSummary] = useState<ContractSummary | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [tokenSymbol, setTokenSymbol] = useState<string>("");
@@ -514,5 +514,10 @@ export function useContractActions(onSuccess?: () => void) {
 
 // Utility function
 export function formatAmount(amount: bigint, decimals: number, symbol: string): string {
-  return `${formatUnits(amount, decimals)} ${symbol}`;
+  if (decimals <= 0) {
+    return `${amount.toString()} ${symbol}`;
+  }
+  const divisor = 10n ** BigInt(decimals);
+  const whole = amount / divisor;
+  return `${whole.toString()} ${symbol}`;
 }

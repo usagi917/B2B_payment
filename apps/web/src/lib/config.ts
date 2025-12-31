@@ -1,10 +1,11 @@
 import { http, createPublicClient, createWalletClient, custom, type Address, type Chain } from "viem";
-import { sepolia, baseSepolia, polygonAmoy } from "viem/chains";
+import { sepolia, baseSepolia, polygonAmoy, base } from "viem/chains";
 
 // Supported chains
 export const SUPPORTED_CHAINS: Record<number, Chain> = {
   [sepolia.id]: sepolia,
   [baseSepolia.id]: baseSepolia,
+  [base.id]: base,
   [polygonAmoy.id]: polygonAmoy,
 };
 

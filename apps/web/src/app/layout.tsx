@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Wagyu Milestone Escrow",
+  title: "Milestone Escrow",
   description: "B2B和牛肥育工程マイルストーンエスクローdApp",
 };
 

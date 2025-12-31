@@ -6,13 +6,14 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
-A milestone-based escrow dApp for wagyu fattening workflows where funds are released step-by-step
-by Buyer/Producer/Admin roles. Evidence is hashed on-chain and the UI builds a timeline from events.
-This is B2B payment infrastructure, not an investment product, and is an unaudited demo for testnet use.
+A B2B escrow dApp that defines wagyu fattening steps as milestones and releases funds in stages
+across three roles (Buyer/Producer/Admin). Evidence is hashed and stored on-chain, and the UI
+builds a timeline from events. This is B2B payment infrastructure, not an investment product.
+It is an unaudited demo/testnet MVP.
 
 ## Features
 
-- 11 milestone escrow (E1 to E6) with staged releases
+- Staged escrow based on 11 milestones (E1 to E6)
 - Role-based actions: Lock, Submit, Approve, Cancel
 - Evidence hashing and event timeline visualization
 - Testnet support for Sepolia, Base Sepolia, and Polygon Amoy
@@ -46,8 +47,8 @@ pnpm install
 ### dApp
 
 1. Connect a wallet and switch to the target network
-2. Buyer locks the total amount (ERC20 approve required first)
-3. Producer submits a milestone with evidence (evidence is hashed)
+2. Buyer locks the total amount via "Lock Funds" (ERC20 approve required first)
+3. Producer selects a milestone and submits evidence (evidence is hashed)
 4. Buyer approves and releases the milestone amount
 5. Admin can cancel and refund remaining funds if needed
 

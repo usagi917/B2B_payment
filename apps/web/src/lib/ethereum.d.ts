@@ -1,5 +1,3 @@
-import type { Address } from "viem";
-
 declare global {
   interface Window {
     ethereum?: {

@@ -185,10 +185,6 @@ export function ContractSummary({
       {/* Addresses */}
       <div className="space-y-0 text-xs">
         <div className="flex items-center justify-between py-2.5 border-t border-[var(--color-divider)]">
-          <span className="text-[var(--color-text-muted)]">{t("tokenAddress")}</span>
-          <span className="font-mono text-[var(--color-text-secondary)]">{shortenAddress(summary.token)}</span>
-        </div>
-        <div className="flex items-center justify-between py-2.5 border-t border-[var(--color-divider)]">
           <span className="text-[var(--color-text-muted)]">{t("buyerAddress")}</span>
           <span className="font-mono text-[var(--color-buyer)]">{shortenAddress(summary.buyer)}</span>
         </div>

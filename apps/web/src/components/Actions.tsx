@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Hash } from "viem";
 import type { ContractSummary, Milestone, UserRole } from "@/lib/types";
 import { MilestoneState } from "@/lib/types";
@@ -38,26 +38,39 @@ export function Actions({
   const [approveIndex, setApproveIndex] = useState<number>(0);
   const [cancelReason, setCancelReason] = useState("");
 
+  const pendingMilestones = useMemo(
+    () =>
+      milestones
+        .map((m, i) => ({ ...m, index: i }))
+        .filter((m) => m.state === MilestoneState.PENDING),
+    [milestones]
+  );
+
+  const submittedMilestones = useMemo(
+    () =>
+      milestones
+        .map((m, i) => ({ ...m, index: i }))
+        .filter((m) => m.state === MilestoneState.SUBMITTED),
+    [milestones]
+  );
+
+  // Update default selection when milestones change
+  useEffect(() => {
+    if (pendingMilestones.length > 0 && !pendingMilestones.find((m) => m.index === submitIndex)) {
+      setSubmitIndex(pendingMilestones[0].index);
+    }
+  }, [pendingMilestones, submitIndex]);
+
+  useEffect(() => {
+    if (submittedMilestones.length > 0 && !submittedMilestones.find((m) => m.index === approveIndex)) {
+      setApproveIndex(submittedMilestones[0].index);
+    }
+  }, [submittedMilestones, approveIndex]);
+
   if (!summary) return null;
 
   const isLocked = summary.lockedAmount > 0n;
   const isCancelled = summary.cancelled;
-
-  const pendingMilestones = milestones
-    .map((m, i) => ({ ...m, index: i }))
-    .filter((m) => m.state === MilestoneState.PENDING);
-
-  const submittedMilestones = milestones
-    .map((m, i) => ({ ...m, index: i }))
-    .filter((m) => m.state === MilestoneState.SUBMITTED);
-
-  // Update default selection when milestones change
-  if (pendingMilestones.length > 0 && !pendingMilestones.find(m => m.index === submitIndex)) {
-    setSubmitIndex(pendingMilestones[0].index);
-  }
-  if (submittedMilestones.length > 0 && !submittedMilestones.find(m => m.index === approveIndex)) {
-    setApproveIndex(submittedMilestones[0].index);
-  }
 
   return (
     <div className="card p-5 animate-fade-in">
@@ -298,7 +311,6 @@ export function Actions({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               </div>
-              <p className="text-sm text-[var(--color-text-muted)]">{t("connectRoleWallet")}</p>
             </div>
           )}
         </div>

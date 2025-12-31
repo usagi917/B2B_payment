@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import type { Address } from "viem";
 import { useI18n } from "@/lib/i18n";
 import type { UserRole } from "@/lib/types";
@@ -13,6 +14,29 @@ interface ConnectWalletProps {
   onDisconnect: () => void;
 }
 
+const buildIdenticonCells = (address: Address) => {
+  const seed = address.toLowerCase().replace(/^0x/, "");
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+
+  const cells: Array<{ x: number; y: number }> = [];
+  for (let y = 0; y < 5; y += 1) {
+    const row: boolean[] = [];
+    for (let x = 0; x < 3; x += 1) {
+      hash = (hash * 1103515245 + 12345) >>> 0;
+      row.push((hash & 1) === 1);
+    }
+    const mirrored = row.slice(0, 2).reverse();
+    const full = row.concat(mirrored);
+    for (let x = 0; x < 5; x += 1) {
+      if (full[x]) cells.push({ x, y });
+    }
+  }
+  return cells;
+};
+
 export function ConnectWallet({
   address,
   isConnecting,
@@ -22,6 +46,11 @@ export function ConnectWallet({
   onDisconnect,
 }: ConnectWalletProps) {
   const { t } = useI18n();
+
+  const identiconCells = useMemo(
+    () => (address ? buildIdenticonCells(address) : []),
+    [address],
+  );
 
   const shortenAddress = (addr: Address) =>
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -67,7 +96,6 @@ export function ConnectWallet({
         </div>
         <div>
           <h2 className="section-title">{t("wallet")}</h2>
-          <p className="section-subtitle">{t("connectRoleWallet")}</p>
         </div>
       </div>
 
@@ -82,8 +110,24 @@ export function ConnectWallet({
           {/* Connected Status */}
           <div className="flex items-center gap-3 p-3 surface rounded-lg">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white font-semibold text-sm">
-                {address.slice(2, 4).toUpperCase()}
+              <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white">
+                <svg
+                  className="w-6 h-6"
+                  viewBox="0 0 5 5"
+                  aria-hidden="true"
+                >
+                  {identiconCells.map((cell, index) => (
+                    <rect
+                      key={`${cell.x}-${cell.y}-${index}`}
+                      x={cell.x + 0.08}
+                      y={cell.y + 0.08}
+                      width={0.84}
+                      height={0.84}
+                      rx={0.2}
+                      fill="currentColor"
+                    />
+                  ))}
+                </svg>
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[var(--color-success)] rounded-full border-2 border-[var(--color-surface)]" />
             </div>
@@ -151,20 +195,6 @@ export function ConnectWallet({
             </>
           ) : (
             <>
-              <svg
-                className="w-5 h-5"
-                viewBox="0 0 40 40"
-                fill="none"
-              >
-                <path
-                  d="M37.5 20c0 9.665-7.835 17.5-17.5 17.5S2.5 29.665 2.5 20 10.335 2.5 20 2.5 37.5 10.335 37.5 20z"
-                  fill="#F6851B"
-                />
-                <path
-                  d="M32.5 15l-10 5-2.5-7.5L32.5 15zM7.5 15l10 5 2.5-7.5L7.5 15zM27.5 27.5L20 30l-7.5-2.5 2.5-5 5 2.5 5-2.5 2.5 5z"
-                  fill="white"
-                />
-              </svg>
               {t("connectWallet")}
             </>
           )}
