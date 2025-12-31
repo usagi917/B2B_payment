@@ -4,7 +4,7 @@ import { baseSepolia } from "viem/chains";
 import { ESCROW_ABI, ERC20_ABI } from "@/lib/abi";
 import { SUPPORTED_CHAINS } from "@/lib/config";
 
-type MilestoneState = 0 | 1 | 2; // PENDING, SUBMITTED, APPROVED
+type MilestoneState = 0 | 1; // PENDING, COMPLETED
 
 interface Milestone {
   code: string;
@@ -49,15 +49,14 @@ const calcProgressPercent = (released: bigint, total: bigint): number =>
 const getStatus = (
   cancelled: boolean,
   lockedAmount: bigint,
-  approvedCount: number,
-  submittedCount: number,
+  completedCount: number,
   totalMilestones: number
 ): string => {
   if (cancelled) return "Cancelled";
   if (lockedAmount === 0n) return "Not Locked";
-  if (approvedCount === totalMilestones) return "Completed";
-  if (submittedCount > 0) return "Pending Approval";
-  return "In Progress";
+  if (completedCount === totalMilestones) return "Completed";
+  if (completedCount > 0) return "In Progress";
+  return "Locked";
 };
 
 function generateSVG(
@@ -75,7 +74,6 @@ function generateSVG(
   const bgGradientEnd = cancelled ? "#16213e" : "#1a1a3e";
   const accentColor = cancelled ? "#e74c3c" : "#f39c12";
   const successColor = "#27ae60";
-  const warningColor = "#f39c12";
   const pendingColor = "#3498db";
   const textColor = "#ecf0f1";
   const mutedColor = "#7f8c8d";
@@ -88,12 +86,10 @@ function generateSVG(
 
       let fillColor = pendingColor;
       let icon = "○";
-      if (m.state === 2) {
+      if (m.state === 1) {
+        // COMPLETED
         fillColor = successColor;
         icon = "✓";
-      } else if (m.state === 1) {
-        fillColor = warningColor;
-        icon = "◐";
       }
 
       return `
@@ -169,20 +165,17 @@ function generateSVG(
   ${milestoneIndicators}
 
   <!-- Legend -->
-  <g transform="translate(40, 450)">
+  <g transform="translate(80, 450)">
     <rect width="12" height="12" rx="2" fill="${successColor}"/>
-    <text x="18" y="10" font-family="Arial, sans-serif" font-size="10" fill="${mutedColor}">Approved</text>
+    <text x="18" y="10" font-family="Arial, sans-serif" font-size="10" fill="${mutedColor}">Completed</text>
 
-    <rect x="90" width="12" height="12" rx="2" fill="${warningColor}"/>
-    <text x="108" y="10" font-family="Arial, sans-serif" font-size="10" fill="${mutedColor}">Submitted</text>
-
-    <rect x="190" width="12" height="12" rx="2" fill="${pendingColor}"/>
-    <text x="208" y="10" font-family="Arial, sans-serif" font-size="10" fill="${mutedColor}">Pending</text>
+    <rect x="110" width="12" height="12" rx="2" fill="${pendingColor}"/>
+    <text x="128" y="10" font-family="Arial, sans-serif" font-size="10" fill="${mutedColor}">Pending</text>
   </g>
 
   <!-- Footer -->
   <text x="200" y="485" font-family="Arial, sans-serif" font-size="8" fill="${mutedColor}40" text-anchor="middle">
-    Dynamic NFT - Updates with contract state
+    Dynamic NFT - Auto-payment on milestone completion
   </text>
 </svg>
   `.trim();
@@ -196,32 +189,17 @@ export async function GET(
 ) {
   try {
     const { tokenId } = await params;
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:176',message:'GET request received',data:{tokenId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     const tokenIdNum = parseInt(tokenId);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:178',message:'tokenId parsed',data:{tokenIdNum,isNaN:isNaN(tokenIdNum)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
 
     if (isNaN(tokenIdNum) || tokenIdNum < 1) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:185',message:'Invalid tokenId error',data:{tokenIdNum},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
       return new NextResponse("Invalid tokenId", { status: HTTP_STATUS.BAD_REQUEST });
     }
 
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
     const escrowAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as Address;
     const nftContractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS as Address;
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:187',message:'Environment variables check',data:{hasRpcUrl:!!rpcUrl,hasEscrowAddress:!!escrowAddress,hasNftContractAddress:!!nftContractAddress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
 
     if (!rpcUrl || !escrowAddress) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:199',message:'Missing configuration error',data:{hasRpcUrl:!!rpcUrl,hasEscrowAddress:!!escrowAddress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       return new NextResponse("Missing configuration", { status: HTTP_STATUS.INTERNAL_SERVER_ERROR });
     }
 
@@ -233,25 +211,16 @@ export async function GET(
     let targetEscrow = escrowAddress;
     if (nftContractAddress) {
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:199',message:'Reading escrow from NFT contract',data:{nftContractAddress,tokenIdNum},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         const escrowFromNft = await client.readContract({
           address: nftContractAddress,
           abi: NFT_ABI,
           functionName: "escrowContracts",
           args: [BigInt(tokenIdNum)],
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:226',message:'Escrow from NFT contract received',data:{escrowFromNft,isZeroAddress:escrowFromNft === ZERO_ADDRESS},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
         if (escrowFromNft !== ZERO_ADDRESS) {
           targetEscrow = escrowFromNft;
         }
-      } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:210',message:'Error reading escrow from NFT contract',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
+      } catch {
         // Fall back to env contract address
       }
     }
@@ -307,14 +276,12 @@ export async function GET(
     }
 
     // Calculate stats
-    const approvedCount = milestones.filter((m) => m.state === 2).length;
-    const submittedCount = milestones.filter((m) => m.state === 1).length;
+    const completedCount = milestones.filter((m) => m.state === 1).length;
     const progressPercent = calcProgressPercent(releasedAmount, totalAmount);
     const status = getStatus(
       cancelled,
       lockedAmount,
-      approvedCount,
-      submittedCount,
+      completedCount,
       milestones.length
     );
 
@@ -336,9 +303,6 @@ export async function GET(
       },
     });
   } catch (error) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:300',message:'NFT image error caught',data:{error:error instanceof Error ? error.message : String(error),stack:error instanceof Error ? error.stack : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
     console.error("NFT image error:", error);
 
     // Return fallback SVG on error

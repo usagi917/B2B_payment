@@ -15,7 +15,7 @@ const NFT_ABI = [
   },
 ] as const;
 
-type MilestoneState = 0 | 1 | 2; // PENDING, SUBMITTED, APPROVED
+type MilestoneState = 0 | 1; // PENDING, COMPLETED
 
 interface Milestone {
   code: string;
@@ -135,8 +135,7 @@ export async function GET(
     }
 
     // Calculate stats
-    const approvedCount = milestones.filter((m) => m.state === 2).length;
-    const submittedCount = milestones.filter((m) => m.state === 1).length;
+    const completedCount = milestones.filter((m) => m.state === 1).length;
     const pendingCount = milestones.filter((m) => m.state === 0).length;
     const progressPercent = calcProgressPercent(releasedAmount, totalAmount);
 
@@ -145,12 +144,12 @@ export async function GET(
     if (cancelled) {
       status = "Cancelled";
     } else if (lockedAmount > 0n) {
-      if (approvedCount === milestones.length) {
+      if (completedCount === milestones.length) {
         status = "Completed";
-      } else if (submittedCount > 0) {
-        status = "In Progress (Pending Approval)";
-      } else {
+      } else if (completedCount > 0) {
         status = "In Progress";
+      } else {
+        status = "Locked";
       }
     }
 
@@ -158,8 +157,7 @@ export async function GET(
     const attributes = [
       { trait_type: "Status", value: status },
       { trait_type: "Progress", value: `${progressPercent}%` },
-      { trait_type: "Milestones Approved", value: approvedCount },
-      { trait_type: "Milestones Submitted", value: submittedCount },
+      { trait_type: "Milestones Completed", value: completedCount },
       { trait_type: "Milestones Pending", value: pendingCount },
       { trait_type: "Total Amount", value: `${formatTokenAmount(totalAmount, decimals)} ${symbol}` },
       { trait_type: "Released Amount", value: `${formatTokenAmount(releasedAmount, decimals)} ${symbol}` },
@@ -170,7 +168,7 @@ export async function GET(
     const baseUrl = request.nextUrl.origin;
     const metadata = {
       name: `Wagyu Lot #${tokenId.padStart(3, "0")}`,
-      description: `Milestone-based escrow for Wagyu cattle fattening. This NFT dynamically reflects the current state of the escrow contract. Progress: ${progressPercent}% (${approvedCount}/${milestones.length} milestones approved).`,
+      description: `Milestone-based escrow for Wagyu cattle fattening with auto-payment. This NFT dynamically reflects the current state of the escrow contract. Progress: ${progressPercent}% (${completedCount}/${milestones.length} milestones completed).`,
       image: `${baseUrl}/api/nft/${tokenId}/image`,
       external_url: baseUrl,
       attributes,
