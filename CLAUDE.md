@@ -21,10 +21,11 @@ hackson/
 ### Smart Contract (MilestoneEscrow.sol)
 
 - **Pattern**: 1 lot = 1 contract instance
-- **Roles**: Buyer (lock, approve), Producer (submit), Admin (cancel) - addresses fixed at deploy
-- **State**: Milestones array with PENDING → SUBMITTED → APPROVED transitions
+- **Roles**: Buyer (lock), Producer (submit & auto-receive), Admin (cancel) - addresses fixed at deploy
+- **State**: Milestones array with PENDING → COMPLETED transitions (auto-payment on submit)
 - **Release rates (bps, 10000=100%)**: E1(1000), E2(1000), E3_01-E3_06(500 each), E4(1000), E5(2000), E6(2000)
-- **Events**: `Locked`, `Submitted`, `Released`, `Cancelled` - dApp timeline is built from events only (no DB)
+- **Events**: `Locked`, `Completed`, `Cancelled` - dApp timeline is built from events only (no DB)
+- **Auto-payment**: When Producer submits a milestone, JPYC is automatically transferred (no Buyer approval needed)
 
 ### dApp (apps/web/)
 
@@ -70,8 +71,7 @@ State updates must happen before external calls (ERC20 transfers) to prevent ree
 
 ### Guards
 - `lock()`: Buyer only, once only
-- `submit()`: Producer only, requires locked state, milestone must be PENDING
-- `approve()`: Buyer only, milestone must be SUBMITTED
+- `submit()`: Producer only, requires locked state, milestone must be PENDING, auto-transfers JPYC
 - `cancel()`: Admin only, refunds unlocked amount to Buyer
 
 ### Required UI Disclaimers
@@ -84,8 +84,7 @@ Must display:
 ## Testing Checklist
 
 - lock: non-buyer rejected, double-lock rejected
-- submit: pre-lock rejected, non-producer rejected, state transition works
-- approve: non-SUBMITTED rejected, non-buyer rejected, release amount correct, double-approve rejected
+- submit: pre-lock rejected, non-producer rejected, state transition works, auto-payment correct, double-submit rejected
 - cancel: non-admin rejected, refund correct, post-cancel operations rejected
 - bps total equals 10000
 

@@ -13,6 +13,10 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 contract MilestoneNFT is ERC721, Ownable {
     using Strings for uint256;
 
+    interface IMilestoneEscrow {
+        function buyer() external view returns (address);
+    }
+
     uint256 private _nextTokenId;
     string public baseURI;
 
@@ -25,6 +29,7 @@ contract MilestoneNFT is ERC721, Ownable {
 
     error AlreadyMinted();
     error InvalidEscrowContract();
+    error OnlyBuyer();
 
     constructor(string memory _baseURI) ERC721("Wagyu Milestone", "WAGYU") Ownable(msg.sender) {
         baseURI = _baseURI;
@@ -48,6 +53,28 @@ contract MilestoneNFT is ERC721, Ownable {
         _safeMint(to, tokenId);
 
         emit Minted(tokenId, escrowContract, to);
+        return tokenId;
+    }
+
+    /**
+     * @notice Buyerが自分宛にNFTをミント
+     * @param escrowContract MilestoneEscrowコントラクトアドレス
+     */
+    function mintToBuyer(address escrowContract) external returns (uint256) {
+        if (escrowContract == address(0)) revert InvalidEscrowContract();
+        if (escrowToTokenId[escrowContract] != 0) revert AlreadyMinted();
+
+        address buyer = IMilestoneEscrow(escrowContract).buyer();
+        if (msg.sender != buyer) revert OnlyBuyer();
+
+        uint256 tokenId = _nextTokenId++;
+
+        escrowContracts[tokenId] = escrowContract;
+        escrowToTokenId[escrowContract] = tokenId;
+
+        _safeMint(buyer, tokenId);
+
+        emit Minted(tokenId, escrowContract, buyer);
         return tokenId;
     }
 

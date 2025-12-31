@@ -7,24 +7,25 @@
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
 和牛の肥育工程をマイルストーンとして定義し、Buyer/Producer/Admin の3ロールで資金を段階解放する
-B2B向けエスクローdAppです。証跡はハッシュ化してオンチェーンに保存し、イベントからタイムラインを表示します。
-これはB2B決済インフラであり投資商品ではありません。未監査のデモ/テストネット向けMVPです。
+B2B向けエスクローdAppです。証跡はハッシュ化しつつオンチェーンに保存し、イベント履歴から
+タイムラインとDynamic NFTを表示します。未監査のテストネット向けMVPであり投資商品ではありません。
 
 ## Features
 
 - 11マイルストーン（E1〜E6）に基づく段階支払いエスクロー
 - Buyer/Producer/Adminのロール別アクション（Lock, Submit, Approve, Cancel）
-- 証跡入力のハッシュ化とイベントタイムラインの可視化
-- Sepolia / Base Sepolia / Polygon Amoy テストネット対応
+- 証跡テキストのオンチェーン保存とハッシュ化、イベントタイムラインの可視化
+- Dynamic NFTメタデータ/画像API（エスクロー状態を反映）
 - Next.js + viem + Tailwindによるフロントエンド（バックエンド不要）
 
 ## Requirements
 
-- Node.js（Next.js 15互換）
+- Node.js（Next.js 15系プロジェクト）
 - pnpm
-- MetaMaskなどのEVMウォレット
+- EVMウォレット（MetaMask等）
 - RPCエンドポイント
 - デプロイ済みのERC20トークンとMilestoneEscrowコントラクト
+- （任意）MilestoneNFTコントラクト（NFTからエスクローを引く場合）
 
 ## Installation
 
@@ -47,27 +48,24 @@ pnpm install
 
 1. ウォレットを接続し、対象ネットワークへ切り替え
 2. Buyerが「Lock Funds」で総額をロック（事前にERC20 approveが必要）
-3. Producerがマイルストーンを選択し、証跡を入力してSubmit（証跡はハッシュ化）
+3. Producerがマイルストーンを選択し、証跡を入力してSubmit（証跡はオンチェーン保存＋ハッシュ化）
 4. Buyerが承認し、該当分の資金を解放
 5. Adminは必要に応じてCancelで未解放分を返金
 
-### Milestone Schedule
+### Dynamic NFT API（Optional）
 
-| Code | Description | Release Rate |
-|------|-------------|--------------|
-| E1 | 契約・個体登録 | 10% |
-| E2 | 初期検疫・導入 | 10% |
-| E3_01〜E3_06 | 月次肥育記録×6 | 5% each (30% total) |
-| E4 | 出荷準備 | 10% |
-| E5 | 出荷 | 20% |
-| E6 | 受領・検収 | 20% |
-| **Total** | | **100%** |
+- メタデータ: `GET /api/nft/:tokenId`
+- 画像: `GET /api/nft/:tokenId/image`
 
-### Smart Contract Deployment (Example: Remix)
+`NEXT_PUBLIC_NFT_CONTRACT_ADDRESS` が設定されている場合は
+NFTコントラクトからエスクローアドレスを解決します。未設定の場合は
+`NEXT_PUBLIC_CONTRACT_ADDRESS` を使用します。
+
+### Smart Contract Deployment（Example: Remix）
 
 1. https://remix.ethereum.org を開く
-2. `contracts/MilestoneEscrow.sol` と `contracts/MockERC20.sol` を作成して貼り付け
-3. Solidity 0.8.20+ でコンパイル
+2. `contracts/MilestoneEscrow.sol` / `contracts/MockERC20.sol` / `contracts/MilestoneNFT.sol` を作成して貼り付け
+3. Solidity 0.8.24 でコンパイル
 4. `MockERC20` をデプロイ（例: `("Test Token", "TEST", 18)`）
 5. `MilestoneEscrow` をデプロイ
    - `_token`: ERC20トークンアドレス
@@ -75,6 +73,7 @@ pnpm install
    - `_producer`: Producerアドレス
    - `_admin`: Adminアドレス
    - `_totalAmount`: 総額（最小単位）
+6. （任意）`MilestoneNFT` をデプロイし、`baseURI` にdAppのURLを指定
 
 ## User Flow (Mermaid)
 
@@ -86,15 +85,15 @@ graph TD
   D --> E[システム: アカウント取得とチェーン確認]
   E --> C
   C -->|はい| F[ユーザー: アクション選択<br/>ロック 申請 承認 キャンセル]
-  F --> G[システム: トランザクション作成<br/>証跡をハッシュ化]
+  F --> G[システム: 証跡ハッシュ化<br/>トランザクション送信]
   G --> H{トランザクション成功?}
   H -->|いいえ| I[システム: エラー表示と再試行]
   I --> F
   H -->|はい| J[システム: サマリーとタイムライン更新]
-  J --> K[ユーザー: 更新結果を確認]
+  J --> K[ユーザー: 更新結果とNFTを確認]
 ```
 
-## System Architecture (Mermaid)
+## System Architecture 
 
 ```mermaid
 graph LR
@@ -102,18 +101,25 @@ graph LR
     UI[Nextjs Web App]
     Wallet[Wallet Extension]
   end
+  subgraph AppServer
+    API[Nextjs API Routes]
+  end
   subgraph Infrastructure
     RPC[RPC Provider]
-    Explorer[Block Explorer optional]
+    Explorer["Block Explorer (optional)"]
   end
   subgraph Blockchain
     Escrow[Milestone Escrow]
     Token[ERC20 Token]
+    NFT["Milestone NFT (optional)"]
   end
   UI -->|Read logs and state| RPC
   Wallet -->|Sign and send tx| RPC
+  API -->|Read state for metadata| RPC
+  UI -->|Fetch metadata image| API
   RPC -->|Contract calls| Escrow
   RPC -->|Token calls| Token
+  RPC -.->|NFT lookup| NFT
   UI -.->|Tx link| Explorer
 ```
 
@@ -123,14 +129,17 @@ graph LR
 hackson/
 ├── apps/
 │   └── web/                 # Next.js dApp
-│       ├── src/app/          # App router UI
+│       ├── src/app/          # App router UI + API routes
 │       ├── src/components/   # UI components
 │       ├── src/lib/          # viem hooks + config
 │       ├── .env.example      # 環境変数テンプレート
 │       └── package.json
 ├── contracts/                # Solidity smart contracts
 │   ├── MilestoneEscrow.sol
+│   ├── MilestoneNFT.sol
 │   └── MockERC20.sol
+├── lib/                       # OpenZeppelin contracts
+├── foundry.toml
 ├── README.md
 ├── README.en.md
 └── LICENSE
@@ -146,19 +155,22 @@ NEXT_PUBLIC_CHAIN_ID=11155111
 NEXT_PUBLIC_CONTRACT_ADDRESS=
 NEXT_PUBLIC_TOKEN_ADDRESS=
 NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE=
+NEXT_PUBLIC_NFT_CONTRACT_ADDRESS=
 ```
 
 - `NEXT_PUBLIC_RPC_URL`: 対象ネットワークのRPC URL
-- `NEXT_PUBLIC_CHAIN_ID`: Chain ID（例: Sepolia 11155111 / Base Sepolia 84532 / Polygon Amoy 80002）
+- `NEXT_PUBLIC_CHAIN_ID`: Chain ID（例: Sepolia 11155111 / Base Sepolia 84532 / Base 8453 / Polygon Amoy 80002）
 - `NEXT_PUBLIC_CONTRACT_ADDRESS`: MilestoneEscrowのアドレス
 - `NEXT_PUBLIC_TOKEN_ADDRESS`: ERC20トークンのアドレス
 - `NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE`: 取引URLのベース（任意）
+- `NEXT_PUBLIC_NFT_CONTRACT_ADDRESS`: MilestoneNFTのアドレス（任意）
 
 ## Development
 
 ```bash
 cd apps/web
 pnpm dev
+pnpm dev:turbo
 pnpm build
 pnpm start
 pnpm lint

@@ -19,8 +19,7 @@ contract MilestoneEscrow is ReentrancyGuard {
     // ============ Enums ============
     enum MilestoneState {
         PENDING,    // 未申請
-        SUBMITTED,  // 申請済み（承認待ち）
-        APPROVED    // 承認済み（解放完了）
+        COMPLETED   // 完了（自動解放済み）
     }
 
     // ============ Structs ============
@@ -30,8 +29,8 @@ contract MilestoneEscrow is ReentrancyGuard {
         MilestoneState state;
         bytes32 evidenceHash;  // エビデンスハッシュ
         string evidenceText;   // エビデンステキスト（オンチェーン）
-        uint256 submittedAt;   // 申請タイムスタンプ
-        uint256 approvedAt;    // 承認タイムスタンプ
+        uint256 completedAt;   // 完了タイムスタンプ
+        uint256 releasedAmount; // 解放額
     }
 
     // ============ State Variables ============
@@ -50,8 +49,7 @@ contract MilestoneEscrow is ReentrancyGuard {
 
     // ============ Events ============
     event Locked(uint256 amount, address indexed actor);
-    event Submitted(uint256 indexed index, string code, bytes32 evidenceHash, address indexed actor);
-    event Released(uint256 indexed index, string code, uint256 amount, address indexed actor);
+    event Completed(uint256 indexed index, string code, bytes32 evidenceHash, uint256 amount, address indexed actor);
     event Cancelled(string reason, uint256 refundAmount, address indexed actor);
 
     // ============ Errors ============
@@ -63,8 +61,6 @@ contract MilestoneEscrow is ReentrancyGuard {
     error AlreadyCancelled();
     error InvalidMilestoneIndex();
     error MilestoneNotPending();
-    error MilestoneNotSubmitted();
-    error TransferFailed();
 
     // ============ Modifiers ============
     modifier onlyBuyer() {
@@ -95,8 +91,8 @@ contract MilestoneEscrow is ReentrancyGuard {
     // ============ Constructor ============
     /**
      * @param _token ERC20トークンアドレス
-     * @param _buyer Buyerアドレス（ロック・承認権限）
-     * @param _producer Producerアドレス（申請権限）
+     * @param _buyer Buyerアドレス（ロック権限）
+     * @param _producer Producerアドレス（申請・自動受取権限）
      * @param _admin Adminアドレス（キャンセル権限）
      * @param _totalAmount 総額
      */
@@ -132,8 +128,8 @@ contract MilestoneEscrow is ReentrancyGuard {
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
             evidenceText: "",
-            submittedAt: 0,
-            approvedAt: 0
+            completedAt: 0,
+            releasedAmount: 0
         }));
 
         // E2: 初期検疫・導入 (10%)
@@ -143,8 +139,8 @@ contract MilestoneEscrow is ReentrancyGuard {
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
             evidenceText: "",
-            submittedAt: 0,
-            approvedAt: 0
+            completedAt: 0,
+            releasedAmount: 0
         }));
 
         // E3_01〜E3_06: 月次肥育記録×6 (各5%)
@@ -155,8 +151,8 @@ contract MilestoneEscrow is ReentrancyGuard {
                 state: MilestoneState.PENDING,
                 evidenceHash: bytes32(0),
                 evidenceText: "",
-                submittedAt: 0,
-                approvedAt: 0
+                completedAt: 0,
+                releasedAmount: 0
             }));
         }
 
@@ -167,8 +163,8 @@ contract MilestoneEscrow is ReentrancyGuard {
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
             evidenceText: "",
-            submittedAt: 0,
-            approvedAt: 0
+            completedAt: 0,
+            releasedAmount: 0
         }));
 
         // E5: 出荷 (20%)
@@ -178,8 +174,8 @@ contract MilestoneEscrow is ReentrancyGuard {
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
             evidenceText: "",
-            submittedAt: 0,
-            approvedAt: 0
+            completedAt: 0,
+            releasedAmount: 0
         }));
 
         // E6: 受領・検収 (20%)
@@ -189,8 +185,8 @@ contract MilestoneEscrow is ReentrancyGuard {
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
             evidenceText: "",
-            submittedAt: 0,
-            approvedAt: 0
+            completedAt: 0,
+            releasedAmount: 0
         }));
     }
 
@@ -233,7 +229,7 @@ contract MilestoneEscrow is ReentrancyGuard {
     }
 
     /**
-     * @notice Producerが工程完了を申請
+     * @notice Producerが工程完了を申請し、自動的にJPYCが解放される
      * @param index マイルストーンインデックス
      * @param evidenceText エビデンステキスト（オンチェーンに保存）
      */
@@ -242,59 +238,43 @@ contract MilestoneEscrow is ReentrancyGuard {
         onlyProducer
         whenLocked
         notCancelled
+        nonReentrant
     {
         if (index >= milestones.length) revert InvalidMilestoneIndex();
         if (milestones[index].state != MilestoneState.PENDING) revert MilestoneNotPending();
 
-        bytes32 evidenceHash = keccak256(bytes(evidenceText));
-        milestones[index].state = MilestoneState.SUBMITTED;
-        milestones[index].evidenceHash = evidenceHash;
-        milestones[index].evidenceText = evidenceText;
-        milestones[index].submittedAt = block.timestamp;
-
-        emit Submitted(index, milestones[index].code, evidenceHash, msg.sender);
-    }
-
-    /**
-     * @notice Buyerがマイルストーンを承認し、該当分を解放
-     * @param index マイルストーンインデックス
-     */
-    function approve(uint256 index)
-        external
-        onlyBuyer
-        whenLocked
-        notCancelled
-        nonReentrant
-    {
-        if (index >= milestones.length) revert InvalidMilestoneIndex();
-        if (milestones[index].state != MilestoneState.SUBMITTED) revert MilestoneNotSubmitted();
-
+        // 解放額を計算
         uint256 remaining = lockedAmount - releasedAmount;
         uint256 releaseAmount = (totalAmount * milestones[index].bps) / 10000;
 
-        bool isLastApproval = true;
+        // 最後のマイルストーンなら残額全部、そうでなければ計算額（残高上限）
+        bool isLastMilestone = true;
         for (uint256 i = 0; i < milestones.length; i++) {
             if (i == index) continue;
-            if (milestones[i].state != MilestoneState.APPROVED) {
-                isLastApproval = false;
+            if (milestones[i].state != MilestoneState.COMPLETED) {
+                isLastMilestone = false;
                 break;
             }
         }
-        if (isLastApproval) {
+        if (isLastMilestone) {
             releaseAmount = remaining;
         } else if (releaseAmount > remaining) {
             releaseAmount = remaining;
         }
 
         // State update first (CEI pattern)
-        milestones[index].state = MilestoneState.APPROVED;
-        milestones[index].approvedAt = block.timestamp;
+        bytes32 evidenceHash = keccak256(bytes(evidenceText));
+        milestones[index].state = MilestoneState.COMPLETED;
+        milestones[index].evidenceHash = evidenceHash;
+        milestones[index].evidenceText = evidenceText;
+        milestones[index].completedAt = block.timestamp;
+        milestones[index].releasedAmount = releaseAmount;
         releasedAmount += releaseAmount;
 
-        // External call
+        // External call - 自動でProducerに送金
         token.safeTransfer(producer, releaseAmount);
 
-        emit Released(index, milestones[index].code, releaseAmount, msg.sender);
+        emit Completed(index, milestones[index].code, evidenceHash, releaseAmount, msg.sender);
     }
 
     /**
@@ -339,12 +319,12 @@ contract MilestoneEscrow is ReentrancyGuard {
         MilestoneState state,
         bytes32 evidenceHash,
         string memory evidenceText,
-        uint256 submittedAt,
-        uint256 approvedAt
+        uint256 completedAt,
+        uint256 milestoneReleasedAmount
     ) {
         require(index < milestones.length, "Invalid index");
         Milestone storage m = milestones[index];
-        return (m.code, m.bps, m.state, m.evidenceHash, m.evidenceText, m.submittedAt, m.approvedAt);
+        return (m.code, m.bps, m.state, m.evidenceHash, m.evidenceText, m.completedAt, m.releasedAmount);
     }
 
     /**

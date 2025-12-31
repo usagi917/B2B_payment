@@ -189,8 +189,8 @@ export function useContractData() {
           state: m[2] as MilestoneState,
           evidenceHash: m[3],
           evidenceText: m[4],
-          submittedAt: m[5],
-          approvedAt: m[6],
+          completedAt: m[5],
+          releasedAmount: m[6],
         });
       }
 
@@ -245,7 +245,7 @@ export function useTimeline() {
     try {
       const client = createClient();
 
-      const [lockedLogs, submittedLogs, releasedLogs, cancelledLogs] = await Promise.all([
+      const [lockedLogs, completedLogs, cancelledLogs] = await Promise.all([
         client.getLogs({
           address: config.contractAddress,
           event: {
@@ -263,25 +263,11 @@ export function useTimeline() {
           address: config.contractAddress,
           event: {
             type: "event",
-            name: "Submitted",
+            name: "Completed",
             inputs: [
               { name: "index", type: "uint256", indexed: true },
               { name: "code", type: "string", indexed: false },
               { name: "evidenceHash", type: "bytes32", indexed: false },
-              { name: "actor", type: "address", indexed: true },
-            ],
-          },
-          fromBlock: 0n,
-          toBlock: "latest",
-        }),
-        client.getLogs({
-          address: config.contractAddress,
-          event: {
-            type: "event",
-            name: "Released",
-            inputs: [
-              { name: "index", type: "uint256", indexed: true },
-              { name: "code", type: "string", indexed: false },
               { name: "amount", type: "uint256", indexed: false },
               { name: "actor", type: "address", indexed: true },
             ],
@@ -317,26 +303,15 @@ export function useTimeline() {
         });
       }
 
-      for (const log of submittedLogs) {
+      for (const log of completedLogs) {
         allEvents.push({
-          type: "Submitted",
+          type: "Completed",
           actor: log.args.actor!,
           txHash: log.transactionHash!,
           blockNumber: log.blockNumber!,
           index: log.args.index,
           code: log.args.code,
           evidenceHash: log.args.evidenceHash,
-        });
-      }
-
-      for (const log of releasedLogs) {
-        allEvents.push({
-          type: "Released",
-          actor: log.args.actor!,
-          txHash: log.transactionHash!,
-          blockNumber: log.blockNumber!,
-          index: log.args.index,
-          code: log.args.code,
           amount: log.args.amount,
         });
       }
@@ -448,36 +423,6 @@ export function useContractActions(onSuccess?: () => void) {
     }
   }, [onSuccess]);
 
-  const approve = useCallback(async (index: number) => {
-    setIsLoading(true);
-    setError(null);
-    setTxHash(null);
-
-    try {
-      const wallet = createWallet();
-      const client = createClient();
-      if (!wallet) throw new Error("Walletが接続されていません");
-
-      const [account] = await wallet.getAddresses();
-
-      const hash = await wallet.writeContract({
-        address: config.contractAddress,
-        abi: ESCROW_ABI,
-        functionName: "approve",
-        args: [BigInt(index)],
-        account,
-      });
-
-      await client.waitForTransactionReceipt({ hash });
-      setTxHash(hash);
-      onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Approve失敗");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onSuccess]);
-
   const cancel = useCallback(async (reason: string) => {
     setIsLoading(true);
     setError(null);
@@ -508,7 +453,7 @@ export function useContractActions(onSuccess?: () => void) {
     }
   }, [onSuccess]);
 
-  return { lock, submit, approve, cancel, isLoading, error, txHash };
+  return { lock, submit, cancel, isLoading, error, txHash };
 }
 
 // Utility function

@@ -22,7 +22,6 @@ interface ActionsProps {
   userRole: UserRole;
   onLock: (totalAmount: bigint) => Promise<void>;
   onSubmit: (index: number, evidence: string) => Promise<void>;
-  onApprove: (index: number) => Promise<void>;
   onCancel: (reason: string) => Promise<void>;
   isLoading: boolean;
   error: string | null;
@@ -36,7 +35,6 @@ export function Actions({
   userRole,
   onLock,
   onSubmit,
-  onApprove,
   onCancel,
   isLoading,
   error,
@@ -45,7 +43,6 @@ export function Actions({
   const { t } = useI18n();
   const [submitIndex, setSubmitIndex] = useState<number>(0);
   const [evidence, setEvidence] = useState("");
-  const [approveIndex, setApproveIndex] = useState<number>(0);
   const [cancelReason, setCancelReason] = useState("");
 
   const pendingMilestones = useMemo(
@@ -56,48 +53,16 @@ export function Actions({
     [milestones]
   );
 
-  const submittedMilestones = useMemo(
-    () =>
-      milestones
-        .map((m, i) => ({ ...m, index: i }))
-        .filter((m) => m.state === MilestoneState.SUBMITTED),
-    [milestones]
-  );
-
   // Update default selection when milestones change
-  // Fix: Remove submitIndex/approveIndex from dependencies to prevent unnecessary re-runs
-  // Only update when milestones array changes and current selection is invalid
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Actions.tsx:59',message:'useEffect submitIndex check',data:{pendingMilestonesLength:pendingMilestones.length,currentSubmitIndex:submitIndex,isValid:!!pendingMilestones.find((m) => m.index === submitIndex)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     if (pendingMilestones.length > 0) {
       const isValidIndex = pendingMilestones.some((m) => m.index === submitIndex);
       if (!isValidIndex) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Actions.tsx:63',message:'setSubmitIndex called',data:{newIndex:pendingMilestones[0].index},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         setSubmitIndex(pendingMilestones[0].index);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingMilestones]);
-
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Actions.tsx:70',message:'useEffect approveIndex check',data:{submittedMilestonesLength:submittedMilestones.length,currentApproveIndex:approveIndex,isValid:!!submittedMilestones.find((m) => m.index === approveIndex)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    if (submittedMilestones.length > 0) {
-      const isValidIndex = submittedMilestones.some((m) => m.index === approveIndex);
-      if (!isValidIndex) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Actions.tsx:72',message:'setApproveIndex called',data:{newIndex:submittedMilestones[0].index},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        setApproveIndex(submittedMilestones[0].index);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submittedMilestones]);
 
   if (!summary) return null;
 
@@ -105,9 +70,8 @@ export function Actions({
   const isCancelled = summary.cancelled;
   const hasBuyerLock = userRole === "buyer" && !isLocked;
   const hasProducerSubmit = userRole === "producer" && isLocked && pendingMilestones.length > 0;
-  const hasBuyerApprove = userRole === "buyer" && isLocked && submittedMilestones.length > 0;
   const hasAdminCancel = userRole === "admin";
-  const hasAnyActions = hasBuyerLock || hasProducerSubmit || hasBuyerApprove || hasAdminCancel;
+  const hasAnyActions = hasBuyerLock || hasProducerSubmit || hasAdminCancel;
   const emptyMessage = !address
     ? t("connectWalletHint")
     : userRole === "none"
@@ -212,7 +176,7 @@ export function Actions({
             </div>
           )}
 
-          {/* Producer: Submit */}
+          {/* Producer: Submit (自動支払い) */}
           {hasProducerSubmit && (
             <div className="p-4 rounded-xl bg-[#E8F5E9]">
               <div className="flex items-center gap-2 mb-3">
@@ -221,6 +185,9 @@ export function Actions({
                 </svg>
                 <h3 className="font-medium text-[var(--color-text)]">{t("submitMilestone")}</h3>
               </div>
+              <p className="text-xs text-[var(--color-text-secondary)] mb-3">
+                {t("autoPaymentNote")}
+              </p>
               <div className="space-y-3">
                 <select
                   value={submitIndex}
@@ -251,46 +218,7 @@ export function Actions({
                       {t("processing")}
                     </>
                   ) : (
-                    t("submit")
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Buyer: Approve */}
-          {hasBuyerApprove && (
-            <div className="p-4 rounded-xl bg-[#E3F2FD]">
-              <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-[var(--color-buyer)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                <h3 className="font-medium text-[var(--color-text)]">{t("approveMilestone")}</h3>
-              </div>
-              <div className="space-y-3">
-                <select
-                  value={approveIndex}
-                  onChange={(e) => setApproveIndex(Number(e.target.value))}
-                  className="input"
-                >
-                  {submittedMilestones.map((m) => (
-                    <option key={m.index} value={m.index}>
-                      {m.code} ({Number(m.bps) / 100}%)
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => onApprove(approveIndex)}
-                  disabled={isLoading}
-                  className="btn btn-primary w-full"
-                >
-                  {isLoading ? (
-                    <>
-                      <LoadingSpinner />
-                      {t("processing")}
-                    </>
-                  ) : (
-                    t("approveRelease")
+                    t("submitAndReceive")
                   )}
                 </button>
               </div>

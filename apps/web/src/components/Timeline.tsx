@@ -35,30 +35,19 @@ export function Timeline({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           ),
-          bgColor: "bg-[var(--color-success)]",
-          borderColor: "border-l-[var(--color-success)]",
+          bgColor: "bg-[var(--color-buyer)]",
+          borderColor: "border-l-[var(--color-buyer)]",
         };
-      case "Submitted":
+      case "Completed":
         return {
-          label: t("eventSubmitted"),
+          label: t("eventCompleted"),
           icon: (
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           ),
-          bgColor: "bg-[var(--color-warning)]",
-          borderColor: "border-l-[var(--color-warning)]",
-        };
-      case "Released":
-        return {
-          label: t("eventReleased"),
-          icon: (
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          ),
-          bgColor: "bg-[var(--color-buyer)]",
-          borderColor: "border-l-[var(--color-buyer)]",
+          bgColor: "bg-[var(--color-success)]",
+          borderColor: "border-l-[var(--color-success)]",
         };
       case "Cancelled":
         return {
@@ -183,20 +172,13 @@ export function Timeline({
                     {event.type === "Locked" && event.amount && (
                       <div className="flex items-center gap-2">
                         <span className="text-[var(--color-text-muted)]">{t("amount")}:</span>
-                        <span className="font-semibold text-[var(--color-success)]">
+                        <span className="font-semibold text-[var(--color-buyer)]">
                           {formatAmount(event.amount, tokenDecimals, tokenSymbol)}
                         </span>
                       </div>
                     )}
 
-                    {event.type === "Submitted" && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[var(--color-text-muted)]">{t("milestone")}:</span>
-                        <span className="font-mono">{event.code}</span>
-                      </div>
-                    )}
-
-                    {event.type === "Released" && (
+                    {event.type === "Completed" && (
                       <>
                         <div className="flex items-center gap-2">
                           <span className="text-[var(--color-text-muted)]">{t("milestone")}:</span>
@@ -205,7 +187,7 @@ export function Timeline({
                         {event.amount && (
                           <div className="flex items-center gap-2">
                             <span className="text-[var(--color-text-muted)]">{t("amount")}:</span>
-                            <span className="font-semibold text-[var(--color-buyer)]">
+                            <span className="font-semibold text-[var(--color-success)]">
                               {formatAmount(event.amount, tokenDecimals, tokenSymbol)}
                             </span>
                           </div>

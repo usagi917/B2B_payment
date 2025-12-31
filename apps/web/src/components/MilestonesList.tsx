@@ -20,24 +20,18 @@ export function MilestonesList({ milestones }: MilestonesListProps) {
     switch (state) {
       case MilestoneState.PENDING:
         return { label: t("pending"), class: "badge-pending", bgClass: "" };
-      case MilestoneState.SUBMITTED:
+      case MilestoneState.COMPLETED:
         return {
-          label: t("submitted"),
-          class: "badge-submitted",
-          bgClass: "bg-[var(--color-warning-surface)]",
-        };
-      case MilestoneState.APPROVED:
-        return {
-          label: t("approved"),
+          label: t("completed"),
           class: "badge-approved",
           bgClass: "bg-[var(--color-success-surface)]",
         };
     }
   };
 
-  const approvedCount = milestones.filter((m) => m.state === MilestoneState.APPROVED).length;
+  const completedCount = milestones.filter((m) => m.state === MilestoneState.COMPLETED).length;
   const totalCount = milestones.length;
-  const progress = totalCount > 0 ? (approvedCount / totalCount) * 100 : 0;
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
     <div className="card p-5 animate-fade-in">
@@ -61,7 +55,7 @@ export function MilestonesList({ milestones }: MilestonesListProps) {
           <h2 className="section-title">{t("milestones")}</h2>
         </div>
         <span className="text-sm font-medium text-[var(--color-text-secondary)]">
-          {approvedCount}/{totalCount}
+          {completedCount}/{totalCount}
         </span>
       </div>
 
@@ -92,20 +86,14 @@ export function MilestonesList({ milestones }: MilestonesListProps) {
                 {/* Status Icon */}
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    m.state === MilestoneState.APPROVED
+                    m.state === MilestoneState.COMPLETED
                       ? "bg-[var(--color-success)] text-white"
-                      : m.state === MilestoneState.SUBMITTED
-                      ? "bg-[var(--color-warning)] text-white"
                       : "bg-[var(--color-surface-variant)] text-[var(--color-text-muted)]"
                   }`}
                 >
-                  {m.state === MilestoneState.APPROVED ? (
+                  {m.state === MilestoneState.COMPLETED ? (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : m.state === MilestoneState.SUBMITTED ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   ) : (
                     <span className="text-xs">{index + 1}</span>
@@ -139,17 +127,12 @@ export function MilestonesList({ milestones }: MilestonesListProps) {
                 </span>
               </div>
 
-              {/* Timestamps (if submitted or approved) */}
-              {m.state !== MilestoneState.PENDING && (
+              {/* Timestamps (if completed) */}
+              {m.state === MilestoneState.COMPLETED && (
                 <div className="mt-2 pt-2 border-t border-[var(--color-divider)] flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-muted)]">
-                  {m.submittedAt > 0n && (
+                  {m.completedAt > 0n && (
                     <span>
-                      {t("submittedAt")}: {formatTimestamp(m.submittedAt)}
-                    </span>
-                  )}
-                  {m.approvedAt > 0n && (
-                    <span>
-                      {t("approvedAt")}: {formatTimestamp(m.approvedAt)}
+                      {t("completedAt")}: {formatTimestamp(m.completedAt)}
                     </span>
                   )}
                 </div>

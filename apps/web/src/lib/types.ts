@@ -2,8 +2,7 @@ import type { Address, Hash } from "viem";
 
 export enum MilestoneState {
   PENDING = 0,
-  SUBMITTED = 1,
-  APPROVED = 2,
+  COMPLETED = 1,
 }
 
 export interface Milestone {
@@ -12,8 +11,8 @@ export interface Milestone {
   state: MilestoneState;
   evidenceHash: Hash;
   evidenceText: string;
-  submittedAt: bigint;
-  approvedAt: bigint;
+  completedAt: bigint;
+  releasedAmount: bigint;
 }
 
 export interface ContractSummary {
@@ -29,7 +28,7 @@ export interface ContractSummary {
   milestonesCount: bigint;
 }
 
-export type EventType = "Locked" | "Submitted" | "Released" | "Cancelled";
+export type EventType = "Locked" | "Completed" | "Cancelled";
 
 export interface TimelineEvent {
   type: EventType;
@@ -37,9 +36,9 @@ export interface TimelineEvent {
   txHash: Hash;
   blockNumber: bigint;
   timestamp?: number;
-  // Locked
+  // Locked / Completed
   amount?: bigint;
-  // Submitted / Released
+  // Completed
   index?: bigint;
   code?: string;
   evidenceHash?: Hash;

@@ -86,7 +86,6 @@ export default function Home() {
                 userRole={userRole}
                 onLock={actions.lock}
                 onSubmit={actions.submit}
-                onApprove={actions.approve}
                 onCancel={actions.cancel}
                 isLoading={actions.isLoading}
                 error={actions.error}
