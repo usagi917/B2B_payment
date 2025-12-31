@@ -5,6 +5,10 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+interface IMilestoneEscrow {
+    function buyer() external view returns (address);
+}
+
 /**
  * @title MilestoneNFT
  * @notice 和牛エスクローの状態を表すDynamic NFT
@@ -12,10 +16,6 @@ import "@openzeppelin/contracts/utils/Strings.sol";
  */
 contract MilestoneNFT is ERC721, Ownable {
     using Strings for uint256;
-
-    interface IMilestoneEscrow {
-        function buyer() external view returns (address);
-    }
 
     uint256 private _nextTokenId;
     string public baseURI;

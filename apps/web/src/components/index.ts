@@ -6,3 +6,4 @@ export { MilestonesList } from "./MilestonesList";
 export { Timeline } from "./Timeline";
 export { NFTCard } from "./NFTCard";
 export { HeroNFT } from "./HeroNFT";
+export { MarbleBackground, ProgressTorus } from "./three";

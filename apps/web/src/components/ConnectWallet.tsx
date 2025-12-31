@@ -1,6 +1,19 @@
 "use client";
 
 import { useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  Box,
+  Typography,
+  Button,
+  Chip,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import LogoutIcon from "@mui/icons-material/Logout";
 import type { Address } from "viem";
 import { useI18n } from "@/lib/i18n";
 import type { UserRole } from "@/lib/types";
@@ -37,6 +50,29 @@ const buildIdenticonCells = (address: Address) => {
   return cells;
 };
 
+const roleColors: Record<UserRole, { bg: string; color: string; border: string }> = {
+  buyer: {
+    bg: 'var(--color-buyer-surface)',
+    color: 'var(--color-buyer)',
+    border: 'rgba(96, 165, 250, 0.3)',
+  },
+  producer: {
+    bg: 'var(--color-producer-surface)',
+    color: 'var(--color-producer)',
+    border: 'rgba(52, 211, 153, 0.3)',
+  },
+  admin: {
+    bg: 'var(--color-admin-surface)',
+    color: 'var(--color-admin)',
+    border: 'rgba(167, 139, 250, 0.3)',
+  },
+  none: {
+    bg: 'var(--color-surface-variant)',
+    color: 'var(--color-text-muted)',
+    border: 'var(--color-border)',
+  },
+};
+
 export function ConnectWallet({
   address,
   isConnecting,
@@ -55,151 +91,250 @@ export function ConnectWallet({
   const shortenAddress = (addr: Address) =>
     `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-  const roleConfig: Record<UserRole, { label: string; badgeClass: string }> = {
-    buyer: {
-      label: t("buyer"),
-      badgeClass: "badge-buyer",
-    },
-    producer: {
-      label: t("producer"),
-      badgeClass: "badge-producer",
-    },
-    admin: {
-      label: t("admin"),
-      badgeClass: "badge-admin",
-    },
-    none: {
-      label: t("observer"),
-      badgeClass: "badge-pending",
-    },
+  const roleConfig: Record<UserRole, string> = {
+    buyer: t("buyer"),
+    producer: t("producer"),
+    admin: t("admin"),
+    none: t("observer"),
   };
 
-  const { label: roleLabel, badgeClass } = roleConfig[userRole];
+  const roleLabel = roleConfig[userRole];
+  const colors = roleColors[userRole];
 
   return (
-    <div className="card p-5 animate-fade-in">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-9 h-9 rounded-lg surface flex items-center justify-center">
-          <svg
-            className="w-4 h-4 text-[var(--color-text-secondary)]"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-            />
-          </svg>
-        </div>
-        <div>
-          <h2 className="section-title">{t("wallet")}</h2>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-[#FFEBEE]">
-          <p className="text-sm text-[var(--color-error)]">{error}</p>
-        </div>
-      )}
-
-      {address ? (
-        <div className="space-y-4">
-          {/* Connected Status */}
-          <div className="flex items-center gap-3 p-3 surface rounded-lg">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white">
-                <svg
-                  className="w-6 h-6"
-                  viewBox="0 0 5 5"
-                  aria-hidden="true"
-                >
-                  {identiconCells.map((cell, index) => (
-                    <rect
-                      key={`${cell.x}-${cell.y}-${index}`}
-                      x={cell.x + 0.08}
-                      y={cell.y + 0.08}
-                      width={0.84}
-                      height={0.84}
-                      rx={0.2}
-                      fill="currentColor"
-                    />
-                  ))}
-                </svg>
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[var(--color-success)] rounded-full border-2 border-[var(--color-surface)]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-mono text-sm font-medium truncate text-[var(--color-text)]">
-                {shortenAddress(address)}
-              </p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className={`badge ${badgeClass}`}>
-                  {roleLabel}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Disconnect Button */}
-          <button
-            onClick={onDisconnect}
-            className="btn btn-ghost w-full text-sm"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
+      <Card
+        sx={{
+          background: 'var(--glass-bg)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid var(--glass-border)',
+          borderRadius: 3,
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          {/* Header */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 2,
+                background: 'var(--color-surface-variant)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            {t("disconnect")}
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={onConnect}
-          disabled={isConnecting}
-          className="btn btn-primary w-full"
-        >
-          {isConnecting ? (
-            <>
-              <svg
-                className="w-4 h-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
+              <AccountBalanceWalletIcon sx={{ color: 'var(--wagyu-gold)', fontSize: 20 }} />
+            </Box>
+            <Typography
+              variant="h6"
+              sx={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 600,
+                fontSize: '1rem',
+                color: 'var(--color-text)',
+              }}
+            >
+              {t("wallet")}
+            </Typography>
+          </Box>
+
+          {/* Error */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
               >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              {t("connecting")}
-            </>
-          ) : (
-            <>
-              {t("connectWallet")}
-            </>
-          )}
-        </button>
-      )}
-    </div>
+                <Alert
+                  severity="error"
+                  sx={{
+                    mb: 2,
+                    background: 'var(--color-error-surface)',
+                    color: 'var(--color-error)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    '& .MuiAlert-icon': { color: 'var(--color-error)' },
+                  }}
+                >
+                  {error}
+                </Alert>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence mode="wait">
+            {address ? (
+              <motion.div
+                key="connected"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Connected Status */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    p: 2,
+                    borderRadius: 2,
+                    background: 'var(--color-surface-variant)',
+                    border: '1px solid var(--color-border)',
+                    mb: 2,
+                  }}
+                >
+                  {/* Identicon */}
+                  <Box sx={{ position: 'relative' }}>
+                    <Box
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, var(--wagyu-gold) 0%, var(--wagyu-gold-dark) 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: 'var(--shadow-gold)',
+                      }}
+                    >
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 5 5"
+                        aria-hidden="true"
+                      >
+                        {identiconCells.map((cell, index) => (
+                          <rect
+                            key={`${cell.x}-${cell.y}-${index}`}
+                            x={cell.x + 0.08}
+                            y={cell.y + 0.08}
+                            width={0.84}
+                            height={0.84}
+                            rx={0.15}
+                            fill="var(--wagyu-charcoal)"
+                          />
+                        ))}
+                      </svg>
+                    </Box>
+                    {/* Online indicator */}
+                    <Box
+                      component={motion.div}
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      sx={{
+                        position: 'absolute',
+                        bottom: -2,
+                        right: -2,
+                        width: 14,
+                        height: 14,
+                        borderRadius: '50%',
+                        background: 'var(--color-success)',
+                        border: '3px solid var(--color-surface)',
+                        boxShadow: 'var(--glow-success)',
+                      }}
+                    />
+                  </Box>
+
+                  {/* Address & Role */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: 'var(--color-text)',
+                        mb: 0.5,
+                      }}
+                    >
+                      {shortenAddress(address)}
+                    </Typography>
+                    <Chip
+                      label={roleLabel}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        fontSize: '0.625rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        background: colors.bg,
+                        color: colors.color,
+                        border: `1px solid ${colors.border}`,
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                {/* Disconnect Button */}
+                <Button
+                  onClick={onDisconnect}
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<LogoutIcon sx={{ fontSize: 18 }} />}
+                  sx={{
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-secondary)',
+                    py: 1.25,
+                    '&:hover': {
+                      borderColor: 'var(--color-error)',
+                      color: 'var(--color-error)',
+                      background: 'var(--color-error-surface)',
+                    },
+                  }}
+                >
+                  {t("disconnect")}
+                </Button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="disconnected"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Button
+                  onClick={onConnect}
+                  disabled={isConnecting}
+                  fullWidth
+                  variant="contained"
+                  sx={{
+                    py: 1.5,
+                    background: 'linear-gradient(135deg, var(--wagyu-gold) 0%, var(--wagyu-gold-dark) 100%)',
+                    color: 'var(--wagyu-charcoal)',
+                    fontWeight: 600,
+                    boxShadow: 'var(--shadow-gold)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, var(--wagyu-gold-light) 0%, var(--wagyu-gold) 100%)',
+                      boxShadow: 'var(--glow-gold)',
+                    },
+                    '&:disabled': {
+                      background: 'var(--color-surface-variant)',
+                      color: 'var(--color-text-muted)',
+                    },
+                  }}
+                  startIcon={
+                    isConnecting ? (
+                      <CircularProgress size={18} sx={{ color: 'inherit' }} />
+                    ) : (
+                      <AccountBalanceWalletIcon sx={{ fontSize: 20 }} />
+                    )
+                  }
+                >
+                  {isConnecting ? t("connecting") : t("connectWallet")}
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

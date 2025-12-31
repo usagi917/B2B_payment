@@ -1,5 +1,7 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { AppBar, Toolbar, Box, Typography, ToggleButtonGroup, ToggleButton, Container } from "@mui/material";
 import { useI18n, type Locale } from "@/lib/i18n";
 
 interface HeaderProps {
@@ -10,55 +12,117 @@ export function Header({ onLocaleChange }: HeaderProps) {
   const { locale, t } = useI18n();
 
   return (
-    <header className="sticky top-0 z-50 glass">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
+    <AppBar
+      position="sticky"
+      elevation={0}
+      sx={{
+        background: 'rgba(13, 13, 15, 0.9)',
+        backdropFilter: 'blur(24px)',
+        borderBottom: '1px solid var(--color-border)',
+      }}
+    >
+      <Container maxWidth="lg">
+        <Toolbar
+          disableGutters
+          sx={{
+            minHeight: { xs: 64, sm: 72 },
+            justifyContent: 'space-between',
+          }}
+        >
           {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
-              <img
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                component="img"
                 src="/jpyc-logo.png"
                 alt="JPYC logo"
-                className="w-full h-full object-cover"
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  boxShadow: 'var(--shadow-sm)',
+                  border: '2px solid var(--glass-border)',
+                }}
               />
-            </div>
-            <div>
-              <h1 className="text-base font-semibold text-[var(--color-text)]">
-                {t("appTitle")}
-              </h1>
-              <p className="text-xs text-[var(--color-text-muted)] hidden sm:block">
-                {t("appSubtitle")}
-              </p>
-            </div>
-          </div>
+              <Box>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 600,
+                    fontSize: { xs: '0.95rem', sm: '1.1rem' },
+                    color: 'var(--color-text)',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  {t("appTitle")}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: '0.7rem',
+                    color: 'var(--wagyu-gold)',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    display: { xs: 'none', sm: 'block' },
+                  }}
+                >
+                  {t("appSubtitle")}
+                </Typography>
+              </Box>
+            </Box>
+          </motion.div>
 
           {/* Language Switcher */}
-          <div className="flex items-center">
-            <div className="flex items-center bg-[var(--color-surface-variant)] rounded-lg p-1">
-              <button
-                onClick={() => onLocaleChange("ja")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  locale === "ja"
-                    ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                }`}
-              >
-                JP
-              </button>
-              <button
-                onClick={() => onLocaleChange("en")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  locale === "en"
-                    ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-                }`}
-              >
-                EN
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
+          >
+            <ToggleButtonGroup
+              value={locale}
+              exclusive
+              onChange={(_, newLocale) => newLocale && onLocaleChange(newLocale)}
+              size="small"
+              sx={{
+                background: 'var(--color-surface-variant)',
+                borderRadius: 2,
+                border: '1px solid var(--color-border)',
+                '& .MuiToggleButton-root': {
+                  color: 'var(--color-text-muted)',
+                  border: 'none',
+                  px: 2,
+                  py: 0.75,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.05em',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    background: 'var(--color-surface)',
+                    color: 'var(--color-text)',
+                  },
+                  '&.Mui-selected': {
+                    background: 'var(--wagyu-gold)',
+                    color: 'var(--wagyu-charcoal)',
+                    boxShadow: 'var(--shadow-sm)',
+                    '&:hover': {
+                      background: 'var(--wagyu-gold-light)',
+                    },
+                  },
+                },
+              }}
+            >
+              <ToggleButton value="ja">JP</ToggleButton>
+              <ToggleButton value="en">EN</ToggleButton>
+            </ToggleButtonGroup>
+          </motion.div>
+        </Toolbar>
+      </Container>
+    </AppBar>
   );
 }
