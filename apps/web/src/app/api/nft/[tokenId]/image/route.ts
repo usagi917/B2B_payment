@@ -29,14 +29,36 @@ const resolveChain = () => {
   return SUPPORTED_CHAINS[chainId] ?? baseSepolia;
 };
 
-const formatTokenAmount = (amount: bigint, decimals: number) => {
+// Constants
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+const HTTP_STATUS = {
+  BAD_REQUEST: 400,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
+
+// Utility functions
+const formatTokenAmount = (amount: bigint, decimals: number): string => {
   if (decimals <= 0) return amount.toString();
   const divisor = 10n ** BigInt(decimals);
   return (amount / divisor).toString();
 };
 
-const calcProgressPercent = (released: bigint, total: bigint) =>
+const calcProgressPercent = (released: bigint, total: bigint): number =>
   total > 0n ? Number((released * 100n) / total) : 0;
+
+const getStatus = (
+  cancelled: boolean,
+  lockedAmount: bigint,
+  approvedCount: number,
+  submittedCount: number,
+  totalMilestones: number
+): string => {
+  if (cancelled) return "Cancelled";
+  if (lockedAmount === 0n) return "Not Locked";
+  if (approvedCount === totalMilestones) return "Completed";
+  if (submittedCount > 0) return "Pending Approval";
+  return "In Progress";
+};
 
 function generateSVG(
   tokenId: string,
@@ -174,18 +196,33 @@ export async function GET(
 ) {
   try {
     const { tokenId } = await params;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:176',message:'GET request received',data:{tokenId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     const tokenIdNum = parseInt(tokenId);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:178',message:'tokenId parsed',data:{tokenIdNum,isNaN:isNaN(tokenIdNum)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     if (isNaN(tokenIdNum) || tokenIdNum < 1) {
-      return new NextResponse("Invalid tokenId", { status: 400 });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:185',message:'Invalid tokenId error',data:{tokenIdNum},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      return new NextResponse("Invalid tokenId", { status: HTTP_STATUS.BAD_REQUEST });
     }
 
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
     const escrowAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as Address;
     const nftContractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS as Address;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:187',message:'Environment variables check',data:{hasRpcUrl:!!rpcUrl,hasEscrowAddress:!!escrowAddress,hasNftContractAddress:!!nftContractAddress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
 
     if (!rpcUrl || !escrowAddress) {
-      return new NextResponse("Missing configuration", { status: 500 });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:199',message:'Missing configuration error',data:{hasRpcUrl:!!rpcUrl,hasEscrowAddress:!!escrowAddress},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      return new NextResponse("Missing configuration", { status: HTTP_STATUS.INTERNAL_SERVER_ERROR });
     }
 
     const client = createPublicClient({
@@ -196,16 +233,25 @@ export async function GET(
     let targetEscrow = escrowAddress;
     if (nftContractAddress) {
       try {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:199',message:'Reading escrow from NFT contract',data:{nftContractAddress,tokenIdNum},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         const escrowFromNft = await client.readContract({
           address: nftContractAddress,
           abi: NFT_ABI,
           functionName: "escrowContracts",
           args: [BigInt(tokenIdNum)],
         });
-        if (escrowFromNft !== "0x0000000000000000000000000000000000000000") {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:226',message:'Escrow from NFT contract received',data:{escrowFromNft,isZeroAddress:escrowFromNft === ZERO_ADDRESS},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        if (escrowFromNft !== ZERO_ADDRESS) {
           targetEscrow = escrowFromNft;
         }
-      } catch {
+      } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:210',message:'Error reading escrow from NFT contract',data:{error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         // Fall back to env contract address
       }
     }
@@ -264,20 +310,13 @@ export async function GET(
     const approvedCount = milestones.filter((m) => m.state === 2).length;
     const submittedCount = milestones.filter((m) => m.state === 1).length;
     const progressPercent = calcProgressPercent(releasedAmount, totalAmount);
-
-    // Determine status
-    let status = "Not Locked";
-    if (cancelled) {
-      status = "Cancelled";
-    } else if (lockedAmount > 0n) {
-      if (approvedCount === milestones.length) {
-        status = "Completed";
-      } else if (submittedCount > 0) {
-        status = "Pending Approval";
-      } else {
-        status = "In Progress";
-      }
-    }
+    const status = getStatus(
+      cancelled,
+      lockedAmount,
+      approvedCount,
+      submittedCount,
+      milestones.length
+    );
 
     const svg = generateSVG(
       tokenId,
@@ -297,6 +336,9 @@ export async function GET(
       },
     });
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'route.ts:300',message:'NFT image error caught',data:{error:error instanceof Error ? error.message : String(error),stack:error instanceof Error ? error.stack : undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     console.error("NFT image error:", error);
 
     // Return fallback SVG on error
@@ -313,7 +355,7 @@ export async function GET(
       headers: {
         "Content-Type": "image/svg+xml",
       },
-      status: 500,
+      status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
     });
   }
 }

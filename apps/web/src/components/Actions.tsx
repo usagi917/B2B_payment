@@ -7,6 +7,14 @@ import { MilestoneState } from "@/lib/types";
 import { getTxUrl } from "@/lib/config";
 import { useI18n } from "@/lib/i18n";
 
+// Loading spinner component
+const LoadingSpinner = () => (
+  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+  </svg>
+);
+
 interface ActionsProps {
   summary: ContractSummary | null;
   milestones: Milestone[];
@@ -55,17 +63,39 @@ export function Actions({
   );
 
   // Update default selection when milestones change
+  // Fix: Remove submitIndex/approveIndex from dependencies to prevent unnecessary re-runs
+  // Only update when milestones array changes and current selection is invalid
   useEffect(() => {
-    if (pendingMilestones.length > 0 && !pendingMilestones.find((m) => m.index === submitIndex)) {
-      setSubmitIndex(pendingMilestones[0].index);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Actions.tsx:59',message:'useEffect submitIndex check',data:{pendingMilestonesLength:pendingMilestones.length,currentSubmitIndex:submitIndex,isValid:!!pendingMilestones.find((m) => m.index === submitIndex)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    if (pendingMilestones.length > 0) {
+      const isValidIndex = pendingMilestones.some((m) => m.index === submitIndex);
+      if (!isValidIndex) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Actions.tsx:63',message:'setSubmitIndex called',data:{newIndex:pendingMilestones[0].index},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        setSubmitIndex(pendingMilestones[0].index);
+      }
     }
-  }, [pendingMilestones, submitIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingMilestones]);
 
   useEffect(() => {
-    if (submittedMilestones.length > 0 && !submittedMilestones.find((m) => m.index === approveIndex)) {
-      setApproveIndex(submittedMilestones[0].index);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Actions.tsx:70',message:'useEffect approveIndex check',data:{submittedMilestonesLength:submittedMilestones.length,currentApproveIndex:approveIndex,isValid:!!submittedMilestones.find((m) => m.index === approveIndex)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    if (submittedMilestones.length > 0) {
+      const isValidIndex = submittedMilestones.some((m) => m.index === approveIndex);
+      if (!isValidIndex) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e628bada-d3e6-4079-8ec4-722a5c120ccd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Actions.tsx:72',message:'setApproveIndex called',data:{newIndex:submittedMilestones[0].index},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        setApproveIndex(submittedMilestones[0].index);
+      }
     }
-  }, [submittedMilestones, approveIndex]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submittedMilestones]);
 
   if (!summary) return null;
 
@@ -160,10 +190,7 @@ export function Actions({
               >
                 {isLoading ? (
                   <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
+                    <LoadingSpinner />
                     {t("processing")}
                   </>
                 ) : (
@@ -208,10 +235,7 @@ export function Actions({
                 >
                   {isLoading ? (
                     <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
+                      <LoadingSpinner />
                       {t("processing")}
                     </>
                   ) : (
@@ -250,10 +274,7 @@ export function Actions({
                 >
                   {isLoading ? (
                     <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
+                      <LoadingSpinner />
                       {t("processing")}
                     </>
                   ) : (
@@ -288,10 +309,7 @@ export function Actions({
                 >
                   {isLoading ? (
                     <>
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
+                      <LoadingSpinner />
                       {t("processing")}
                     </>
                   ) : (
