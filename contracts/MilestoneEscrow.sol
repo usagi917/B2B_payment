@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -29,6 +29,7 @@ contract MilestoneEscrow is ReentrancyGuard {
         uint256 bps;           // 解放率 (10000 = 100%)
         MilestoneState state;
         bytes32 evidenceHash;  // エビデンスハッシュ
+        string evidenceText;   // エビデンステキスト（オンチェーン）
         uint256 submittedAt;   // 申請タイムスタンプ
         uint256 approvedAt;    // 承認タイムスタンプ
     }
@@ -130,6 +131,7 @@ contract MilestoneEscrow is ReentrancyGuard {
             bps: 1000,
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
+            evidenceText: "",
             submittedAt: 0,
             approvedAt: 0
         }));
@@ -140,6 +142,7 @@ contract MilestoneEscrow is ReentrancyGuard {
             bps: 1000,
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
+            evidenceText: "",
             submittedAt: 0,
             approvedAt: 0
         }));
@@ -151,6 +154,7 @@ contract MilestoneEscrow is ReentrancyGuard {
                 bps: 500,
                 state: MilestoneState.PENDING,
                 evidenceHash: bytes32(0),
+                evidenceText: "",
                 submittedAt: 0,
                 approvedAt: 0
             }));
@@ -162,6 +166,7 @@ contract MilestoneEscrow is ReentrancyGuard {
             bps: 1000,
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
+            evidenceText: "",
             submittedAt: 0,
             approvedAt: 0
         }));
@@ -172,6 +177,7 @@ contract MilestoneEscrow is ReentrancyGuard {
             bps: 2000,
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
+            evidenceText: "",
             submittedAt: 0,
             approvedAt: 0
         }));
@@ -182,6 +188,7 @@ contract MilestoneEscrow is ReentrancyGuard {
             bps: 2000,
             state: MilestoneState.PENDING,
             evidenceHash: bytes32(0),
+            evidenceText: "",
             submittedAt: 0,
             approvedAt: 0
         }));
@@ -228,9 +235,9 @@ contract MilestoneEscrow is ReentrancyGuard {
     /**
      * @notice Producerが工程完了を申請
      * @param index マイルストーンインデックス
-     * @param evidenceHash エビデンスのハッシュ
+     * @param evidenceText エビデンステキスト（オンチェーンに保存）
      */
-    function submit(uint256 index, bytes32 evidenceHash)
+    function submit(uint256 index, string calldata evidenceText)
         external
         onlyProducer
         whenLocked
@@ -239,8 +246,10 @@ contract MilestoneEscrow is ReentrancyGuard {
         if (index >= milestones.length) revert InvalidMilestoneIndex();
         if (milestones[index].state != MilestoneState.PENDING) revert MilestoneNotPending();
 
+        bytes32 evidenceHash = keccak256(bytes(evidenceText));
         milestones[index].state = MilestoneState.SUBMITTED;
         milestones[index].evidenceHash = evidenceHash;
+        milestones[index].evidenceText = evidenceText;
         milestones[index].submittedAt = block.timestamp;
 
         emit Submitted(index, milestones[index].code, evidenceHash, msg.sender);
@@ -329,12 +338,13 @@ contract MilestoneEscrow is ReentrancyGuard {
         uint256 bps,
         MilestoneState state,
         bytes32 evidenceHash,
+        string memory evidenceText,
         uint256 submittedAt,
         uint256 approvedAt
     ) {
         require(index < milestones.length, "Invalid index");
         Milestone storage m = milestones[index];
-        return (m.code, m.bps, m.state, m.evidenceHash, m.submittedAt, m.approvedAt);
+        return (m.code, m.bps, m.state, m.evidenceHash, m.evidenceText, m.submittedAt, m.approvedAt);
     }
 
     /**

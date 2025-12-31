@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { type Address, type Hash, keccak256, toBytes } from "viem";
+import { type Address, type Hash } from "viem";
 import { createClient, createWallet, config, getChain } from "./config";
 import { ESCROW_ABI, ERC20_ABI } from "./abi";
 import type { ContractSummary, Milestone, MilestoneState, TimelineEvent, UserRole } from "./types";
@@ -188,8 +188,9 @@ export function useContractData() {
           bps: m[1],
           state: m[2] as MilestoneState,
           evidenceHash: m[3],
-          submittedAt: m[4],
-          approvedAt: m[5],
+          evidenceText: m[4],
+          submittedAt: m[5],
+          approvedAt: m[6],
         });
       }
 
@@ -429,13 +430,11 @@ export function useContractActions(onSuccess?: () => void) {
       if (!wallet) throw new Error("Walletが接続されていません");
 
       const [account] = await wallet.getAddresses();
-      const evidenceHash = keccak256(toBytes(evidence));
-
       const hash = await wallet.writeContract({
         address: config.contractAddress,
         abi: ESCROW_ABI,
         functionName: "submit",
-        args: [BigInt(index), evidenceHash],
+        args: [BigInt(index), evidence],
         account,
       });
 

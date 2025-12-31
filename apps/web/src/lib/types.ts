@@ -11,6 +11,7 @@ export interface Milestone {
   bps: bigint;
   state: MilestoneState;
   evidenceHash: Hash;
+  evidenceText: string;
   submittedAt: bigint;
   approvedAt: bigint;
 }

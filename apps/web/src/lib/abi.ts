@@ -117,6 +117,7 @@ export const ESCROW_ABI = [
       { name: "bps", type: "uint256" },
       { name: "state", type: "uint8" },
       { name: "evidenceHash", type: "bytes32" },
+      { name: "evidenceText", type: "string" },
       { name: "submittedAt", type: "uint256" },
       { name: "approvedAt", type: "uint256" },
     ],
@@ -153,7 +154,7 @@ export const ESCROW_ABI = [
     name: "submit",
     inputs: [
       { name: "index", type: "uint256" },
-      { name: "evidenceHash", type: "bytes32" },
+      { name: "evidenceText", type: "string" },
     ],
     outputs: [],
     stateMutability: "nonpayable",

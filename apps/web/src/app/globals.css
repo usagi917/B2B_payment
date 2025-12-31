@@ -28,6 +28,10 @@
   --color-error: #F44336;
   --color-info: #2196F3;
 
+  /* Status Surfaces */
+  --color-success-surface: #E8F5E9;
+  --color-warning-surface: #FFF3E0;
+
   /* Role Colors */
   --color-buyer: #2196F3;
   --color-producer: #4CAF50;
@@ -63,6 +67,9 @@
 
     --color-border: #424242;
     --color-divider: #373737;
+
+    --color-success-surface: #1B2A1B;
+    --color-warning-surface: #2B1F0A;
 
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
     --shadow-md: 0 2px 6px rgba(0,0,0,0.4);

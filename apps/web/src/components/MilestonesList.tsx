@@ -21,9 +21,17 @@ export function MilestonesList({ milestones }: MilestonesListProps) {
       case MilestoneState.PENDING:
         return { label: t("pending"), class: "badge-pending", bgClass: "" };
       case MilestoneState.SUBMITTED:
-        return { label: t("submitted"), class: "badge-submitted", bgClass: "bg-[#FFF3E0]" };
+        return {
+          label: t("submitted"),
+          class: "badge-submitted",
+          bgClass: "bg-[var(--color-warning-surface)]",
+        };
       case MilestoneState.APPROVED:
-        return { label: t("approved"), class: "badge-approved", bgClass: "bg-[#E8F5E9]" };
+        return {
+          label: t("approved"),
+          class: "badge-approved",
+          bgClass: "bg-[var(--color-success-surface)]",
+        };
     }
   };
 
@@ -72,6 +80,8 @@ export function MilestonesList({ milestones }: MilestonesListProps) {
         {milestones.map((m, index) => {
           const { label, class: badgeClass, bgClass } = getStateConfig(m.state);
           const description = t(m.code as TranslationKey) || m.code;
+          const evidenceText = m.evidenceText?.trim();
+          const hasEvidenceText = Boolean(evidenceText);
 
           return (
             <div
@@ -115,6 +125,12 @@ export function MilestonesList({ milestones }: MilestonesListProps) {
                   <p className="text-xs text-[var(--color-text-secondary)] truncate">
                     {description}
                   </p>
+                  {hasEvidenceText && (
+                    <p className="mt-1 text-xs text-[var(--color-text-secondary)] break-words">
+                      <span className="text-[var(--color-text-muted)]">{t("evidence")}:</span>{" "}
+                      {evidenceText}
+                    </p>
+                  )}
                 </div>
 
                 {/* Badge */}

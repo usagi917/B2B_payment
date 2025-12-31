@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Hash } from "viem";
+import type { Address, Hash } from "viem";
 import type { ContractSummary, Milestone, UserRole } from "@/lib/types";
 import { MilestoneState } from "@/lib/types";
 import { getTxUrl } from "@/lib/config";
@@ -16,6 +16,7 @@ const LoadingSpinner = () => (
 );
 
 interface ActionsProps {
+  address: Address | null;
   summary: ContractSummary | null;
   milestones: Milestone[];
   userRole: UserRole;
@@ -29,6 +30,7 @@ interface ActionsProps {
 }
 
 export function Actions({
+  address,
   summary,
   milestones,
   userRole,
@@ -101,6 +103,16 @@ export function Actions({
 
   const isLocked = summary.lockedAmount > 0n;
   const isCancelled = summary.cancelled;
+  const hasBuyerLock = userRole === "buyer" && !isLocked;
+  const hasProducerSubmit = userRole === "producer" && isLocked && pendingMilestones.length > 0;
+  const hasBuyerApprove = userRole === "buyer" && isLocked && submittedMilestones.length > 0;
+  const hasAdminCancel = userRole === "admin";
+  const hasAnyActions = hasBuyerLock || hasProducerSubmit || hasBuyerApprove || hasAdminCancel;
+  const emptyMessage = !address
+    ? t("connectWalletHint")
+    : userRole === "none"
+      ? t("noActionsObserver")
+      : t("noActionsAvailable");
 
   return (
     <div className="card p-5 animate-fade-in">
@@ -172,7 +184,7 @@ export function Actions({
       {!isCancelled && (
         <div className="space-y-4">
           {/* Buyer: Lock */}
-          {userRole === "buyer" && !isLocked && (
+          {hasBuyerLock && (
             <div className="p-4 rounded-xl bg-[#E3F2FD]">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5 text-[var(--color-buyer)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +213,7 @@ export function Actions({
           )}
 
           {/* Producer: Submit */}
-          {userRole === "producer" && isLocked && pendingMilestones.length > 0 && (
+          {hasProducerSubmit && (
             <div className="p-4 rounded-xl bg-[#E8F5E9]">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5 text-[var(--color-producer)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,7 +259,7 @@ export function Actions({
           )}
 
           {/* Buyer: Approve */}
-          {userRole === "buyer" && isLocked && submittedMilestones.length > 0 && (
+          {hasBuyerApprove && (
             <div className="p-4 rounded-xl bg-[#E3F2FD]">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5 text-[var(--color-buyer)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,7 +298,7 @@ export function Actions({
           )}
 
           {/* Admin: Cancel */}
-          {userRole === "admin" && (
+          {hasAdminCancel && (
             <div className="p-4 rounded-xl bg-[#FFEBEE]">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5 text-[var(--color-error)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,7 +333,7 @@ export function Actions({
           )}
 
           {/* No actions available */}
-          {userRole === "none" && (
+          {!hasAnyActions && (
             <div className="text-center py-8">
               <div className="w-12 h-12 mx-auto mb-3 rounded-full surface flex items-center justify-center">
                 <svg className="w-6 h-6 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,6 +341,7 @@ export function Actions({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               </div>
+              <p className="text-sm text-[var(--color-text-muted)]">{emptyMessage}</p>
             </div>
           )}
         </div>

@@ -80,6 +80,7 @@ export default function Home() {
               />
 
               <Actions
+                address={wallet.address}
                 summary={contractData.summary}
                 milestones={contractData.milestones}
                 userRole={userRole}

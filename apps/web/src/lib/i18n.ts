@@ -60,6 +60,9 @@ export const translations = {
     success: "成功！",
     viewTx: "TXを確認",
     contractCancelled: "契約はキャンセルされました。操作はできません。",
+    noActionsAvailable: "現在利用できるアクションはありません",
+    noActionsObserver: "このウォレットは契約参加者ではありません",
+    connectWalletHint: "ウォレットを接続するとアクションが表示されます",
 
     // Milestones
     milestones: "マイルストーン",
@@ -68,6 +71,7 @@ export const translations = {
     rate: "解放率",
     status: "状態",
     evidence: "証跡",
+    evidenceHash: "証跡ハッシュ",
     submittedAt: "申請日時",
     approvedAt: "承認日時",
     pending: "未申請",
@@ -165,6 +169,9 @@ export const translations = {
     success: "Success!",
     viewTx: "View TX",
     contractCancelled: "Contract cancelled. No actions available.",
+    noActionsAvailable: "No actions available right now.",
+    noActionsObserver: "This wallet is not a contract participant.",
+    connectWalletHint: "Connect your wallet to see available actions.",
 
     // Milestones
     milestones: "Milestones",
@@ -173,6 +180,7 @@ export const translations = {
     rate: "Release Rate",
     status: "Status",
     evidence: "Evidence",
+    evidenceHash: "Evidence Hash",
     submittedAt: "Submitted At",
     approvedAt: "Approved At",
     pending: "Pending",
