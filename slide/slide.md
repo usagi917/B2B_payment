@@ -133,13 +133,13 @@ style: |
 </div>
 
 <p class="subtext">
-  <strong>課題:</strong> 生産者は2年間売上ゼロ。<br>
-  購入者は牛が本当に育っているか確認できない。<br>
-  <span class="accent">信頼とキャッシュフローの深い溝。</span>
+  <strong>課題:</strong> 長期制作の生産者は<span class="accent">完成まで売上ゼロ</span>。<br>
+  和牛農家は2年、陶芸家は数ヶ月、酒蔵は1年。<br>
+  購入者は進捗を確認できず、<span class="accent">信頼とキャッシュフローに深い溝</span>。
 </p>
 
-<!-- 
-Image Prompt: 真っ黒な箱（ブラックボックス）の前に立つ、困惑した農家と疑い深いビジネスマン。フラットなイラスト。背景はダークグレー。
+<!--
+Image Prompt: 真っ黒な箱（ブラックボックス）の前に立つ、困惑した農家・陶芸家・酒蔵の職人と疑い深いビジネスマン。フラットなイラスト。背景はダークグレー。
 -->
 
 ---
@@ -209,13 +209,32 @@ Image Prompt: 3枚のフレームが並んでいる。左から右へ、子牛�
 </div>
 
 <p class="subtext">
-  「2年に1回の入金」から<span class="accent">「毎月の入金」</span>へ。<br>
-  生産者の経営リスクを劇的に低減。<br>
-  お金の巡りを、牛の成長スピードに合わせる。
+  「完成まで入金ゼロ」から<span class="accent">「工程ごとに入金」</span>へ。<br>
+  和牛農家も、陶芸作家も、酒蔵も。<br>
+  <span class="accent">創る人が、創ることに集中できる世界へ。</span>
 </p>
 
-<!-- 
+<!--
 Image Prompt: スピードメーターの針がMAX（黄色いゾーン）を振り切っている。背景に流れるような青いライン。
+-->
+
+---
+
+# JPYC
+
+<div class="visual-area">
+  <div class="visual-icon">💴</div>
+  <div class="visual-label">ステーブルコイン決済</div>
+</div>
+
+<p class="subtext">
+  <span class="accent">日本円と等価</span>の価値で即時決済。<br>
+  銀行振込の手数料・時間・営業時間の制約から解放。<br>
+  全取引がブロックチェーン上に記録され<span class="accent">透明性を担保</span>。
+</p>
+
+<!--
+Image Prompt: JPYCのロゴとコインが、銀行の建物をバイパスして直接生産者に届く図。
 -->
 
 ---
@@ -254,6 +273,64 @@ Image Prompt: 複数のブロックチェーンのロゴが繋がったネット
 
 <!--
 Image Prompt: ファクトリーから複数のエスクローコントラクトが生成される図。各エスクローにNFTが紐づく。
+-->
+
+---
+
+# TECH STACK
+
+<div class="visual-area">
+  <div class="visual-icon">🧱</div>
+  <div class="visual-label">Web × Smart Contracts</div>
+</div>
+
+<p class="subtext">
+  <span class="accent">Frontend:</span> Next.js 15 / viem / MUI / Framer Motion<br>
+  <span class="accent">Contracts:</span> Solidity 0.8.24 / Foundry / ERC721 + ERC20<br>
+  <span class="accent">Chains:</span> Sepolia / Base Sepolia / Base / Polygon Amoy
+</p>
+
+<!--
+Image Prompt: ブロック（フロント、コントラクト、チェーン）が横に並ぶシンプルなスタック図。青と黄色の配色。
+-->
+
+---
+
+# FEASIBILITY
+
+<div class="visual-area">
+  <div class="visual-icon">🔧</div>
+  <div class="visual-label">実現アプローチ</div>
+</div>
+
+<p class="subtext">
+  <span class="accent">技術:</span> Solidity実装済 / Polygon Amoyで動作確認 / Vercelデモ公開中<br>
+  <span class="accent">検証:</span> 知り合いの和牛生産者・工芸品作家・酒蔵でテスト運用予定<br>
+  <span class="accent">本番:</span> Polygon PoSメインネット + 実JPYCで決済
+</p>
+
+<!--
+Image Prompt: チェックマークが付いた3つのステップ（開発・検証・本番）が並ぶ図。
+-->
+
+---
+
+# ROADMAP
+
+<div class="visual-area">
+  <div class="visual-icon">🗓️</div>
+  <div class="visual-label">アクションプラン</div>
+</div>
+
+<p class="subtext">
+  <span class="accent">1月:</span> ハッカソン参加・生産者ヒアリング<br>
+  <span class="accent">2-3月:</span> UI改善・テストネットで模擬取引<br>
+  <span class="accent">4-5月:</span> メインネット移行・β版リリース<br>
+  <span class="accent">6月:</span> 本格運用・水平展開検討
+</p>
+
+<!--
+Image Prompt: 1月から6月までのタイムラインが横に並び、各月にアイコンが付いた図。
 -->
 
 ---

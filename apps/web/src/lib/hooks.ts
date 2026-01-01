@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { type Address, type Hash } from "viem";
-import { createClient, createWallet, config, getChain } from "./config";
+import { createClient, createWallet, config, getChain, getMetaMaskProvider } from "./config";
 import { FACTORY_ABI, ESCROW_ABI, ERC20_ABI } from "./abi";
 import type { EscrowInfo, Milestone, ListingSummary, TimelineEvent, UserRole } from "./types";
 
@@ -14,7 +14,8 @@ export function useWallet() {
   const [error, setError] = useState<string | null>(null);
 
   const connect = useCallback(async () => {
-    if (typeof window === "undefined" || !window.ethereum) {
+    const provider = getMetaMaskProvider();
+    if (!provider) {
       setError("MetaMaskがインストールされていません");
       return;
     }
@@ -23,7 +24,7 @@ export function useWallet() {
     setError(null);
 
     try {
-      const accounts = await window.ethereum.request({
+      const accounts = await provider.request({
         method: "eth_requestAccounts",
       }) as Address[];
 
@@ -32,14 +33,14 @@ export function useWallet() {
       }
 
       // Check chain
-      const chainIdHex = await window.ethereum.request({
+      const chainIdHex = await provider.request({
         method: "eth_chainId",
       }) as string;
       const currentChainId = parseInt(chainIdHex, 16);
 
       if (currentChainId !== config.chainId) {
         try {
-          await window.ethereum.request({
+          await provider.request({
             method: "wallet_switchEthereumChain",
             params: [{ chainId: `0x${config.chainId.toString(16)}` }],
           });
@@ -47,7 +48,7 @@ export function useWallet() {
           const err = switchError as { code?: number };
           if (err.code === 4902) {
             const chain = getChain();
-            await window.ethereum.request({
+            await provider.request({
               method: "wallet_addEthereumChain",
               params: [
                 {
@@ -76,7 +77,8 @@ export function useWallet() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.ethereum) {
+    const provider = getMetaMaskProvider();
+    if (provider) {
       const handleAccountsChanged = (...args: unknown[]) => {
         const accounts = args[0] as Address[];
         if (accounts.length === 0) {
@@ -90,12 +92,12 @@ export function useWallet() {
         window.location.reload();
       };
 
-      window.ethereum.on("accountsChanged", handleAccountsChanged);
-      window.ethereum.on("chainChanged", handleChainChanged);
+      provider.on("accountsChanged", handleAccountsChanged);
+      provider.on("chainChanged", handleChainChanged);
 
       return () => {
-        window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
-        window.ethereum?.removeListener("chainChanged", handleChainChanged);
+        provider.removeListener("accountsChanged", handleAccountsChanged);
+        provider.removeListener("chainChanged", handleChainChanged);
       };
     }
   }, []);

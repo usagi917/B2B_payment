@@ -2,12 +2,12 @@ import { http, createPublicClient, createWalletClient, custom, type Address, typ
 import { sepolia, baseSepolia, polygonAmoy, base } from "viem/chains";
 
 // Supported chains
-export const SUPPORTED_CHAINS: Record<number, Chain> = {
-  [sepolia.id]: sepolia,
-  [baseSepolia.id]: baseSepolia,
-  [base.id]: base,
-  [polygonAmoy.id]: polygonAmoy,
-};
+export const SUPPORTED_CHAINS = Object.freeze({
+  [sepolia.id]: sepolia as Chain,
+  [baseSepolia.id]: baseSepolia as Chain,
+  [base.id]: base as Chain,
+  [polygonAmoy.id]: polygonAmoy as Chain,
+});
 
 // Environment variables
 export const config = {
@@ -22,7 +22,9 @@ export const config = {
 };
 
 export const getChain = (): Chain => {
-  return SUPPORTED_CHAINS[config.chainId] || polygonAmoy;
+  // Ensure config.chainId is of a valid type and guard against type errors
+  const chainId = config.chainId as keyof typeof SUPPORTED_CHAINS;
+  return SUPPORTED_CHAINS[chainId] || polygonAmoy;
 };
 
 export const createClient = () => {
@@ -33,14 +35,40 @@ export const createClient = () => {
   });
 };
 
-export const createWallet = () => {
+// MetaMaskプロバイダーを明示的に取得
+export const getMetaMaskProvider = (): typeof window.ethereum | null => {
   if (typeof window === "undefined" || !window.ethereum) {
+    return null;
+  }
+
+  const ethereum = window.ethereum as typeof window.ethereum & {
+    providers?: Array<typeof window.ethereum & { isMetaMask?: boolean }>;
+    isMetaMask?: boolean;
+  };
+
+  // 複数のウォレットがインストールされている場合
+  if (ethereum.providers?.length) {
+    const metaMask = ethereum.providers.find((p) => p.isMetaMask);
+    if (metaMask) return metaMask;
+  }
+
+  // 単体のMetaMaskの場合
+  if (ethereum.isMetaMask) {
+    return ethereum;
+  }
+
+  return ethereum;
+};
+
+export const createWallet = () => {
+  const provider = getMetaMaskProvider();
+  if (!provider) {
     return null;
   }
   const chain = getChain();
   return createWalletClient({
     chain,
-    transport: custom(window.ethereum),
+    transport: custom(provider),
   });
 };
 
