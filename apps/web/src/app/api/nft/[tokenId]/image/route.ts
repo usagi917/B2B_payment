@@ -14,7 +14,8 @@ const resolveChain = () => {
   const chainId = Number(
     process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || polygonAmoy.id
   );
-  return SUPPORTED_CHAINS[chainId] ?? polygonAmoy;
+  const chainKey = chainId as keyof typeof SUPPORTED_CHAINS;
+  return SUPPORTED_CHAINS[chainKey] ?? polygonAmoy;
 };
 
 const HTTP_STATUS = {
