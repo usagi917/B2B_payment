@@ -649,42 +649,54 @@ export default function ListingDetailPage() {
                           </Typography>
 
                           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            {events.map((event, index) => (
-                              <Box
-                                key={index}
-                                sx={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  p: 1.5,
-                                  borderRadius: 1,
-                                  background: "rgba(255, 255, 255, 0.02)",
-                                }}
-                              >
-                                <Box>
-                                  <Typography sx={{ color: "var(--color-text)", fontWeight: 500 }}>
-                                    {event.type === "Locked"
-                                      ? locale === "ja"
-                                        ? "購入"
-                                        : "Purchased"
-                                      : event.name || `Milestone #${event.index}`}
-                                  </Typography>
-                                  {event.amount && (
-                                    <Typography variant="caption" sx={{ color: "var(--color-text-muted)" }}>
-                                      {formatAmount(event.amount, decimals, symbol)}
-                                    </Typography>
-                                  )}
-                                </Box>
-                                <a
-                                  href={getTxUrl(event.txHash)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ color: "var(--wagyu-gold)", fontSize: "0.85rem" }}
+                            {events.map((event, index) => {
+                              const milestoneName =
+                                event.type === "Completed" && event.index !== undefined
+                                  ? milestones[Number(event.index)]?.name
+                                  : undefined;
+
+                              return (
+                                <Box
+                                  key={index}
+                                  sx={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    p: 1.5,
+                                    borderRadius: 1,
+                                    background: "rgba(255, 255, 255, 0.02)",
+                                  }}
                                 >
-                                  {locale === "ja" ? "TX確認" : "View TX"}
-                                </a>
-                              </Box>
-                            ))}
+                                  <Box>
+                                    <Typography sx={{ color: "var(--color-text)", fontWeight: 500 }}>
+                                      {event.type === "Locked"
+                                        ? locale === "ja"
+                                          ? "購入"
+                                          : "Purchased"
+                                        : milestoneName ||
+                                          (event.index !== undefined
+                                            ? `Milestone #${event.index}`
+                                            : locale === "ja"
+                                              ? "マイルストーン"
+                                              : "Milestone")}
+                                    </Typography>
+                                    {event.amount && (
+                                      <Typography variant="caption" sx={{ color: "var(--color-text-muted)" }}>
+                                        {formatAmount(event.amount, decimals, symbol)}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                  <a
+                                    href={getTxUrl(event.txHash)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ color: "var(--wagyu-gold)", fontSize: "0.85rem" }}
+                                  >
+                                    {locale === "ja" ? "TX確認" : "View TX"}
+                                  </a>
+                                </Box>
+                              );
+                            })}
                           </Box>
                         </CardContent>
                       </Card>
