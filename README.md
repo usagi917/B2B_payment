@@ -6,27 +6,26 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
-和牛肥育工程をマイルストーン化したB2B向けエスクローdAppです。
-Producerの工程完了申請でERC20が自動解放され、状態はDynamic NFTとして可視化されます。
-監査未実施のテストネットMVPであり、投資商品ではありません。
+和牛・日本酒・工芸品の出品に対応した、マイルストーン型のエスクローdAppです。
+出品ごとにエスクロー契約とNFTが生成され、購入者のロックと同時にNFTが移転します。
+進捗はマイルストーンで段階解放され、Dynamic NFTとして可視化されます。
 
 ## Features
 
-- 11マイルストーン（E1〜E6、E3_01〜E3_06）に基づく段階解放
-- Buyer/Producer/Adminのロール固定アクション（Lock, Submit, Cancel）
-- Submit時に証跡テキストをオンチェーン保存し、ハッシュ化してイベント発行
-- Dynamic NFTメタデータ/SVG画像API（エスクロー状態を反映）
-- Next.js + viem + Tailwindによるフロントエンド（DB/サーバー不要）
+- 出品ごとに `ListingFactoryV3` がエスクローをデプロイし、NFT（ERC721）をミント
+- 購入時にERC20をロックし、NFTは購入者へ移転（OPEN → ACTIVE → COMPLETED）
+- カテゴリ別マイルストーン（wagyu 11 / sake 5 / craft 4）で段階解放
+- Dynamic NFTメタデータ/SVG画像API（`/api/nft/:tokenId`）
+- Next.js + viem + MUI + Framer Motionによるフロントエンド（DB/サーバー不要）
 
 ## Requirements
 
-- Node.js（Next.js 15互換）
+- Node.js（Next.js 15 互換）
 - pnpm
 - EVMウォレット（MetaMaskなど）
-- RPCエンドポイント
-- デプロイ済みのERC20トークンとMilestoneEscrowコントラクト
-- （任意）MilestoneNFTコントラクト（NFTからエスクローを解決する場合）
-- Solidity 0.8.24（コントラクトコンパイル時）
+- RPCエンドポイント（対応: Sepolia 11155111 / Base Sepolia 84532 / Base 8453 / Polygon Amoy 80002）
+- ListingFactoryV3（ERC721）とERC20トークンのデプロイ済みアドレス
+- Solidity 0.8.24 / Foundry（コントラクトをビルドする場合）
 
 ## Installation
 
@@ -39,61 +38,53 @@ pnpm install
 
 1. `apps/web` に移動
 2. `.env.example` を `.env.local` にコピー
-3. RPC URL、Chain ID、コントラクトアドレスを設定
+3. RPC URL、Chain ID、Factory/Tokenアドレスを設定
 4. `pnpm dev` を実行
 5. `http://localhost:3000` を開く
 
 ## Usage
 
-### dApp
+### dApps
 
-1. ウォレットを接続し、対象ネットワークへ切り替え
-2. Buyerが「Lock Funds」を実行（ERC20 approve → lock の2トランザクション）
-3. Producerがマイルストーンを選択し、証跡テキストを入力してSubmit（自動支払い）
-4. BuyerまたはAdminが必要に応じてCancelで未解放分を返金
+1. Producerがウォレット接続し、カテゴリ・タイトル・価格・画像URLを指定して出品
+2. Buyerが出品を購入（ERC20 approve → lock の2トランザクション）
+3. Producerがマイルストーンを完了報告すると、その分のERC20が解放
+4. すべて完了すると `completed` になり、NFTが進捗を反映
 
-※ `submit` は `lock` 完了後のみ実行できます。`cancel` はBuyerまたはAdminがいつでも実行できます（キャンセル後は進行不可）。
+※ `lock()` はProducer本人からは実行できません。キャンセル機能は実装されていません。
 
-### Dynamic NFT API（任意）
+### Dynamic NFT API
 
 - メタデータ: `GET /api/nft/:tokenId`
 - 画像: `GET /api/nft/:tokenId/image`
 
-`NEXT_PUBLIC_NFT_CONTRACT_ADDRESS` が設定されている場合は
-NFTコントラクトの `escrowContracts(tokenId)` からエスクローを解決します。
-未設定の場合は `NEXT_PUBLIC_CONTRACT_ADDRESS` を使用します。
+APIは `ListingFactoryV3` の `tokenIdToEscrow` からエスクローを解決します。
+`ListingFactoryV3` の `baseURI` は dApp のオリジンに設定してください（`/api/nft/:tokenId` を参照します）。
 
-MilestoneNFTの `baseURI` には dApp のオリジン（例: `https://your-app`）を設定してください。
+### Smart Contract Deployment（Example: Remix / Foundry）
 
-### Smart Contract Deployment（Example: Remix）
-
-1. Remixで `contracts/MilestoneEscrow.sol` / `contracts/MockERC20.sol` / `contracts/MilestoneNFT.sol` を貼り付け
-2. Solidity 0.8.24 でコンパイル
-3. `MockERC20` をデプロイ（例: `("Test Token", "TEST", 18)`）
-4. `MilestoneEscrow` をデプロイ
-   - `_token`: ERC20トークンアドレス
-   - `_buyer`: Buyerアドレス
-   - `_producer`: Producerアドレス
-   - `_admin`: Adminアドレス
-   - `_totalAmount`: 総額（最小単位）
-5. （任意）`MilestoneNFT` をデプロイし、`baseURI` にdAppのオリジンを指定
+1. `contracts/MockERC20.sol` をデプロイ（テスト用）
+2. `contracts/ListingFactoryFull.sol` から `ListingFactoryV3` をデプロイ
+   - `tokenAddress`: ERC20トークンアドレス
+   - `uri`: dAppのオリジン（`https://your-app` など）
+3. dApp から `createListing` を実行（`MilestoneEscrowV3` が自動デプロイされNFTがミント）
 
 ## User Flow (Mermaid)
 
 ```mermaid
 graph TD
-  A[ユーザー: dAppを開く] --> B[システム: 設定とコントラクト状態を読み込む]
+  A[ユーザー: dAppsを開く] --> B[システム: 設定と出品一覧を読み込む]
   B --> C{ウォレット接続済み?}
   C -->|いいえ| D[ユーザー: ウォレット接続]
-  D --> E[システム: アカウント取得とチェーン確認]
+  D --> E[システム: チェーンとアカウント確認]
   E --> C
-  C -->|はい| F[ユーザー: アクション選択<br/>Lock Submit Cancel]
-  F --> G[システム: トランザクション準備<br/>Submit時は証跡をハッシュ化]
+  C -->|はい| F[ユーザー: 出品作成 または 出品選択]
+  F --> G[システム: トランザクション準備<br/>出品作成 購入 完了報告]
   G --> H{トランザクション成功?}
   H -->|いいえ| I[システム: エラー表示と再試行]
   I --> F
-  H -->|はい| J[システム: サマリーとマイルストーンを更新]
-  J --> K[ユーザー: 更新結果とNFT表示を確認]
+  H -->|はい| J[システム: 状態更新とNFT再取得<br/>完了報告時は支払い解放]
+  J --> K[ユーザー: 進捗とNFTを確認]
 ```
 
 ## System Architecture (Mermaid)
@@ -101,28 +92,29 @@ graph TD
 ```mermaid
 graph LR
   subgraph Client
-    UI[Nextjs Web App]
+    UI[Web App]
     Wallet[Wallet Extension]
   end
-  subgraph ApiServer
+  subgraph Api
     API[Nextjs API Routes]
   end
-  subgraph Infrastructure
+  subgraph Infra
     RPC[RPC Provider]
-    Explorer[Block Explorer (optional)]
+    Explorer["Block Explorer (optional)"]
   end
   subgraph Blockchain
-    Escrow[Milestone Escrow]
+    Factory[ListingFactoryV3<br/>ERC721 NFT]
+    Escrow[MilestoneEscrowV3]
     Token[ERC20 Token]
-    NFT[Milestone NFT (optional)]
   end
+  UI -->|HTTP| API
   UI -->|Read state| RPC
   Wallet -->|Sign and send tx| RPC
-  API -->|Read state for metadata| RPC
-  UI -->|Fetch NFT metadata and image| API
-  RPC -->|Contract calls| Escrow
-  RPC -->|Token calls| Token
-  RPC -.->|Escrow lookup| NFT
+  API -->|Read contracts| RPC
+  RPC -->|Factory calls| Factory
+  RPC -->|Escrow calls| Escrow
+  RPC -->|Token transfers| Token
+  Factory -->|Deploys| Escrow
   UI -.->|Tx links| Explorer
 ```
 
@@ -138,10 +130,9 @@ hackson/
 │       ├── .env.example      # 環境変数テンプレート
 │       └── package.json
 ├── contracts/                # Solidity smart contracts
-│   ├── MilestoneEscrow.sol
-│   ├── MilestoneNFT.sol
-│   └── MockERC20.sol
-├── lib/                       # OpenZeppelin contracts
+│   ├── ListingFactoryFull.sol # ListingFactoryV3 + MilestoneEscrowV3
+│   └── MockERC20.sol          # Test ERC20
+├── lib/                       # OpenZeppelin contracts (submodule)
 ├── foundry.toml
 ├── README.md
 ├── README.en.md
@@ -155,21 +146,19 @@ hackson/
 ```
 NEXT_PUBLIC_RPC_URL=
 NEXT_PUBLIC_CHAIN_ID=11155111
-NEXT_PUBLIC_CONTRACT_ADDRESS=
+NEXT_PUBLIC_FACTORY_ADDRESS=
 NEXT_PUBLIC_TOKEN_ADDRESS=
 NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE=
 
-# Optional
-NEXT_PUBLIC_NFT_CONTRACT_ADDRESS=
+# Optional (server-side override)
 CHAIN_ID=
 ```
 
 - `NEXT_PUBLIC_RPC_URL`: 対象ネットワークのRPC URL
 - `NEXT_PUBLIC_CHAIN_ID`: Chain ID（対応: Sepolia 11155111 / Base Sepolia 84532 / Base 8453 / Polygon Amoy 80002）
-- `NEXT_PUBLIC_CONTRACT_ADDRESS`: MilestoneEscrowのアドレス
+- `NEXT_PUBLIC_FACTORY_ADDRESS`: ListingFactoryV3のアドレス
 - `NEXT_PUBLIC_TOKEN_ADDRESS`: ERC20トークンのアドレス
 - `NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE`: 取引URLのベース（任意）
-- `NEXT_PUBLIC_NFT_CONTRACT_ADDRESS`: MilestoneNFTのアドレス（任意）
 - `CHAIN_ID`: APIルート用のChain ID上書き（任意）
 
 ## Development

@@ -6,27 +6,26 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
-A B2B escrow dApp that models wagyu fattening steps as milestones.
-Producers submit completion to auto-release ERC20 payments, and the state is visualized as a dynamic NFT.
-Unaudited testnet MVP and not an investment product.
+A milestone-based escrow dApp for wagyu, sake, and craft listings.
+Each listing deploys its own escrow contract and mints an NFT that transfers to the buyer on lock.
+Progress is released in milestones and rendered as a dynamic NFT.
 
 ## Features
 
-- Staged escrow based on 11 milestones (E1 to E6, E3_01 to E3_06)
-- Fixed-role actions for Buyer/Producer/Admin (Lock, Submit, Cancel)
-- Evidence text stored on-chain with hashing and events on submit
-- Dynamic NFT metadata and SVG image API reflecting escrow status
-- Frontend-only architecture with Next.js, viem, and Tailwind
+- `ListingFactoryV3` deploys an escrow per listing and mints the ERC721 NFT
+- Buyers lock ERC20 funds and receive the NFT (OPEN → ACTIVE → COMPLETED)
+- Category-based milestones (wagyu 11 / sake 5 / craft 4) with fixed release rates
+- Dynamic NFT metadata and SVG image API at `/api/nft/:tokenId`
+- Frontend-only architecture with Next.js, viem, MUI, and Framer Motion
 
 ## Requirements
 
 - Node.js (compatible with Next.js 15)
 - pnpm
 - EVM wallet (MetaMask, etc.)
-- RPC endpoint
-- Deployed ERC20 token and MilestoneEscrow contract
-- (Optional) MilestoneNFT contract for NFT-to-escrow resolution
-- Solidity 0.8.24 (for contract compilation)
+- RPC endpoint (supported: Sepolia 11155111 / Base Sepolia 84532 / Base 8453 / Polygon Amoy 80002)
+- Deployed ListingFactoryV3 (ERC721) and ERC20 token addresses
+- Solidity 0.8.24 / Foundry (if you build contracts)
 
 ## Installation
 
@@ -39,61 +38,53 @@ pnpm install
 
 1. Go to `apps/web`
 2. Copy `.env.example` to `.env.local`
-3. Set RPC URL, Chain ID, and contract addresses
+3. Set RPC URL, Chain ID, and Factory/Token addresses
 4. Run `pnpm dev`
 5. Open `http://localhost:3000`
 
 ## Usage
 
-### dApp
+### dApps
 
-1. Connect a wallet and switch to the target network
-2. Buyer clicks “Lock Funds” (ERC20 approve → lock, two transactions)
-3. Producer selects a milestone and submits evidence text (auto payment)
-4. Buyer or Admin can cancel and refund remaining funds if needed
+1. Producer connects a wallet and creates a listing (category, title, price, image URL)
+2. Buyer purchases the listing (ERC20 approve → lock, two transactions)
+3. Producer submits milestones and ERC20 is released per step
+4. Once all steps are completed, status becomes `completed` and the NFT reflects progress
 
-Note: `submit` requires `lock` to be completed first. `cancel` can be executed by Buyer or Admin at any time (no further actions after cancellation).
+Note: `lock()` cannot be called by the producer. There is no cancel flow in the current contracts.
 
-### Dynamic NFT API (Optional)
+### Dynamic NFT API
 
 - Metadata: `GET /api/nft/:tokenId`
 - Image: `GET /api/nft/:tokenId/image`
 
-If `NEXT_PUBLIC_NFT_CONTRACT_ADDRESS` is set, the API resolves the escrow
-address via `escrowContracts(tokenId)`. Otherwise it uses
-`NEXT_PUBLIC_CONTRACT_ADDRESS`.
+The API resolves escrows via `ListingFactoryV3.tokenIdToEscrow`.
+Set `ListingFactoryV3.baseURI` to your dApp origin so `tokenURI` points to `/api/nft/:tokenId`.
 
-Set MilestoneNFT `baseURI` to your dApp origin (e.g., `https://your-app`).
+### Smart Contract Deployment (Example: Remix / Foundry)
 
-### Smart Contract Deployment (Example: Remix)
-
-1. Paste `contracts/MilestoneEscrow.sol` / `contracts/MockERC20.sol` / `contracts/MilestoneNFT.sol` into Remix
-2. Compile with Solidity 0.8.24
-3. Deploy `MockERC20` (example: `("Test Token", "TEST", 18)`)
-4. Deploy `MilestoneEscrow`
-   - `_token`: ERC20 token address
-   - `_buyer`: Buyer address
-   - `_producer`: Producer address
-   - `_admin`: Admin address
-   - `_totalAmount`: Total amount (smallest unit)
-5. (Optional) Deploy `MilestoneNFT` and set `baseURI` to the dApp origin
+1. Deploy `contracts/MockERC20.sol` (for testing)
+2. Deploy `ListingFactoryV3` from `contracts/ListingFactoryFull.sol`
+   - `tokenAddress`: ERC20 token address
+   - `uri`: dApp origin (e.g., `https://your-app`)
+3. Create listings from the dApp (`MilestoneEscrowV3` is deployed automatically and NFT is minted)
 
 ## User Flow (Mermaid)
 
 ```mermaid
 graph TD
-  A[User: Open dApp] --> B[System: Load config<br/>and contract state]
+  A[User: Open dApps] --> B[System: Load config and listings]
   B --> C{Wallet connected?}
   C -->|No| D[User: Connect wallet]
-  D --> E[System: Check chain<br/>and account]
+  D --> E[System: Check chain and account]
   E --> C
-  C -->|Yes| F[User: Choose action<br/>Lock Submit Cancel]
-  F --> G[System: Prepare transaction<br/>Hash evidence on submit]
+  C -->|Yes| F[User: Create listing or select listing]
+  F --> G[System: Prepare transaction<br/>Create Listing Purchase Submit]
   G --> H{Transaction confirmed?}
-  H -->|No| I[System: Show error<br/>and retry]
+  H -->|No| I[System: Show error and retry]
   I --> F
-  H -->|Yes| J[System: Refresh summary<br/>and milestones]
-  J --> K[User: View updated state and NFT]
+  H -->|Yes| J[System: Update state and refresh NFT<br/>Release funds on submit]
+  J --> K[User: View progress and NFT]
 ```
 
 ## System Architecture (Mermaid)
@@ -101,28 +92,29 @@ graph TD
 ```mermaid
 graph LR
   subgraph Client
-    UI[Nextjs Web App]
+    UI[Web App]
     Wallet[Wallet Extension]
   end
-  subgraph ApiServer
+  subgraph Api
     API[Nextjs API Routes]
   end
-  subgraph Infrastructure
+  subgraph Infra
     RPC[RPC Provider]
-    Explorer[Block Explorer (optional)]
+    Explorer["Block Explorer (optional)"]
   end
   subgraph Blockchain
-    Escrow[Milestone Escrow]
+    Factory[ListingFactoryV3<br/>ERC721 NFT]
+    Escrow[MilestoneEscrowV3]
     Token[ERC20 Token]
-    NFT[Milestone NFT (optional)]
   end
+  UI -->|HTTP| API
   UI -->|Read state| RPC
   Wallet -->|Sign and send tx| RPC
-  API -->|Read state for metadata| RPC
-  UI -->|Fetch NFT metadata and image| API
-  RPC -->|Contract calls| Escrow
-  RPC -->|Token calls| Token
-  RPC -.->|Escrow lookup| NFT
+  API -->|Read contracts| RPC
+  RPC -->|Factory calls| Factory
+  RPC -->|Escrow calls| Escrow
+  RPC -->|Token transfers| Token
+  Factory -->|Deploys| Escrow
   UI -.->|Tx links| Explorer
 ```
 
@@ -138,10 +130,9 @@ hackson/
 │       ├── .env.example      # Environment template
 │       └── package.json
 ├── contracts/                # Solidity smart contracts
-│   ├── MilestoneEscrow.sol
-│   ├── MilestoneNFT.sol
-│   └── MockERC20.sol
-├── lib/                       # OpenZeppelin contracts
+│   ├── ListingFactoryFull.sol # ListingFactoryV3 + MilestoneEscrowV3
+│   └── MockERC20.sol          # Test ERC20
+├── lib/                       # OpenZeppelin contracts (submodule)
 ├── foundry.toml
 ├── README.md
 ├── README.en.md
@@ -155,22 +146,20 @@ hackson/
 ```
 NEXT_PUBLIC_RPC_URL=
 NEXT_PUBLIC_CHAIN_ID=11155111
-NEXT_PUBLIC_CONTRACT_ADDRESS=
+NEXT_PUBLIC_FACTORY_ADDRESS=
 NEXT_PUBLIC_TOKEN_ADDRESS=
 NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE=
 
-# Optional
-NEXT_PUBLIC_NFT_CONTRACT_ADDRESS=
+# Optional (server-side override)
 CHAIN_ID=
 ```
 
 - `NEXT_PUBLIC_RPC_URL`: RPC URL for the target network
 - `NEXT_PUBLIC_CHAIN_ID`: Chain ID (supported: Sepolia 11155111 / Base Sepolia 84532 / Base 8453 / Polygon Amoy 80002)
-- `NEXT_PUBLIC_CONTRACT_ADDRESS`: MilestoneEscrow address
+- `NEXT_PUBLIC_FACTORY_ADDRESS`: ListingFactoryV3 address
 - `NEXT_PUBLIC_TOKEN_ADDRESS`: ERC20 token address
 - `NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE`: Base URL for tx links (optional)
-- `NEXT_PUBLIC_NFT_CONTRACT_ADDRESS`: MilestoneNFT address (optional)
-- `CHAIN_ID`: Override Chain ID for API routes (optional)
+- `CHAIN_ID`: Chain ID override for API routes (optional)
 
 ## Development
 
