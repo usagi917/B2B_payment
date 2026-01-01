@@ -6,7 +6,7 @@ import { SUPPORTED_CHAINS, CATEGORY_LABELS } from "@/lib/config";
 
 interface Milestone {
   name: string;
-  bps: bigint;
+  bps: bigint | number;
   completed: boolean;
 }
 
@@ -217,10 +217,10 @@ export async function GET(
         abi: ESCROW_ABI,
         functionName: "getMilestones",
       }),
-    ]) as [
-      [Address, Address, Address, Address, bigint, bigint, bigint, boolean],
-      [string, string, string, string, string],
-      Array<{ bps: bigint; completed: boolean }>
+    ]) as readonly [
+      readonly [Address, Address, Address, Address, bigint, bigint, bigint, boolean],
+      readonly [string, string, string, string, string],
+      ReadonlyArray<{ bps: bigint | number; completed: boolean }>
     ];
 
     const [, tokenAddress, , , , totalAmount, releasedAmount] = core;
