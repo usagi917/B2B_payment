@@ -1,286 +1,480 @@
-# 🐄 Wagyu Milestone Escrow MVP 開発プラン
+# Wagyu Milestone Escrow v2 - MVP開発プラン
 
-## 概要
-和牛の肥育工程を「支払い条件」として扱い、前払い資金を工程進行に応じて段階解放するdAppを作るよ！
+## プロダクト概要
 
----
-
-## 📋 フェーズ1: プロジェクト初期設定（Day 1 前半）
-
-### 1.1 リポジトリ構造の作成
-```
-hackson/
-├── contracts/           # Solidityスマコン（Remix用ソース保管）
-│   ├── MilestoneEscrow.sol
-│   └── MockERC20.sol
-├── apps/
-│   └── web/            # Next.js dApp
-├── README.md
-└── plan.md
-```
-
-### 1.2 開発環境セットアップ
-- [ ] Remix IDE（https://remix.ethereum.org）をブラウザで開く
-- [ ] Node.js 18+ & pnpm インストール確認
-- [ ] apps/web/ に Next.js（App Router, TypeScript）初期化
+生産者が商品を出品し、購入者が購入。マイルストーン達成ごとにJPYCが自動で生産者に支払われる分散型エスクロー。
 
 ---
 
-## 📋 フェーズ2: スマートコントラクト開発（Day 1 後半〜Day 2）
+## 確定要件
 
-### 2.1 MilestoneEscrow.sol 作成
-**コンストラクタ引数**
-- `token`（ERC20アドレス）
-- `buyer` / `producer` / `admin`（固定アドレス）
-- `totalAmount`（総額）
-
-**状態変数**
-- `lockedAmount` / `releasedAmount` / `refundedAmount`
-- `cancelled`（bool）
-- `Milestone[]` 配列（11個：E1, E2, E3_01〜E3_06, E4, E5, E6）
-
-**関数**
-- [ ] `lock()` - Buyerが総額をロック
-- [ ] `submit(index, evidenceHash)` - Producerが工程申請
-- [ ] `approve(index)` - Buyerが承認→解放送金
-- [ ] `cancel(reason)` - Adminが中断→未解放分返金
-- [ ] `milestonesLength()` - view
-- [ ] `milestone(index)` - view
-
-**イベント**
-- [ ] `Locked(amount, actor)`
-- [ ] `Submitted(index, code, evidenceHash, actor)`
-- [ ] `Released(index, code, amount, actor)`
-- [ ] `Cancelled(reason, refundAmount, actor)`
-
-### 2.2 工程テンプレート（bps: 10000 = 100%）
-| コード | 説明 | 解放率(bps) |
-|--------|------|-------------|
-| E1 | 契約・個体登録 | 1000 (10%) |
-| E2 | 初期検疫・導入 | 1000 (10%) |
-| E3_01〜E3_06 | 月次肥育記録×6 | 各500 (5%) |
-| E4 | 出荷準備 | 1000 (10%) |
-| E5 | 出荷 | 2000 (20%) |
-| E6 | 受領・検収 | 2000 (20%) |
-| **合計** | | **10000 (100%)** |
-
-### 2.3 テスト作成（Remix）
-Remix IDE の「Solidity Unit Testing」プラグインを使うよ！
-
-- [ ] lock: buyer以外不可、二重lock不可
-- [ ] submit: lock前不可、producer以外不可、状態遷移確認
-- [ ] approve: SUBMITTED以外不可、buyer以外不可、解放額確認、二重approve不可
-- [ ] cancel: admin以外不可、未解放分返金確認、cancel後の操作不可
-- [ ] bps合計が10000であること
-
-**Remixでのテスト手順:**
-1. 左メニューの「Plugin Manager」から「Solidity Unit Testing」を有効化
-2. `tests/` フォルダにテストファイル作成
-3. 「Run Tests」ボタンでテスト実行
-
----
-
-## 📋 フェーズ3: テスト用ERC20トークン（Day 2）
-
-### 3.1 MockERC20.sol 作成
-- [ ] テスト用の簡易ERC20トークン作成
-- [ ] mint機能付き（テスト用）
-
----
-
-## 📋 フェーズ4: dApp開発（Day 2〜Day 3）
-
-### 4.1 Next.js プロジェクト設定
-- [ ] Tailwind CSS セットアップ
-- [ ] viem インストール
-- [ ] 環境変数設定
-  - `NEXT_PUBLIC_RPC_URL`
-  - `NEXT_PUBLIC_CHAIN_ID`
-  - `NEXT_PUBLIC_CONTRACT_ADDRESS`
-  - `NEXT_PUBLIC_TOKEN_ADDRESS`
-  - `NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE`
-
-### 4.2 1ページdApp UI構成
-1. **Connect Wallet** - MetaMask接続、チェーンID確認
-2. **Contract Summary** - token/total/locked/released/refunded/cancelled表示
-3. **Role表示** - 接続アドレスがbuyer/producer/adminのどれか
-4. **Actions**
-   - Buyer: Lock, Approve
-   - Producer: Submit（evidenceHash入力）
-   - Admin: Cancel（reason入力）
-5. **Milestones一覧** - index, code, bps, state, evidenceHash, timestamps
-6. **Timeline** - イベントを時系列表示（type/actor/amount/code/txHash/time）
-7. **免責・非投資宣言**
-
-### 4.3 免責文言（必須表示）
-```
-⚠️ 重要事項
-- これは投資商品ではなくB2B取引の決済インフラです
-- 利回り・転売・分割所有・投資勧誘は扱いません
-- 工程は支払い条件ではなく証跡（説明責任）のためのログです
-- 監査済みコントラクトではありません（デモ用）
-```
-
----
-
-## 📋 フェーズ5: ローカルE2Eテスト（Day 3）
-
-### 5.1 Remix VM でのテスト
-Remixの内蔵VM（JavaScript VM）を使ってテストするよ！
-
-- [ ] Remix で「Deploy & Run Transactions」を開く
-- [ ] Environment を「Remix VM (Shanghai)」に設定
-- [ ] MockERC20をデプロイ
-- [ ] MilestoneEscrowをデプロイ（token, buyer, producer, admin, totalAmount を指定）
-- [ ] Remixの画面から一連の操作確認
-  - Buyer: approve(token) → lock
-  - Producer: E1 submit
-  - Buyer: E1 approve（解放確認）
-  - Admin: cancel（返金確認）
-
-### 5.2 dApp との接続テスト
-- [ ] Remix でテストネットにデプロイ後、dAppと接続
-- [ ] Timeline表示確認
-
----
-
-## 📋 フェーズ6: テストネットデプロイ（Day 3〜Day 4）
-
-### 6.1 テストネット選択
-- Sepolia / Base Sepolia / Polygon Amoy など任意
-
-### 6.2 Remix からのデプロイ手順
-1. **MetaMask準備**
-   - [ ] MetaMaskをテストネットに接続
-   - [ ] テスト用ETH（ガス代）を Faucet から取得
-
-2. **Remix設定**
-   - [ ] 「Deploy & Run Transactions」を開く
-   - [ ] Environment を「Injected Provider - MetaMask」に変更
-   - [ ] MetaMaskで接続を承認
-
-3. **デプロイ実行**
-   - [ ] MockERC20 をデプロイ → Token Address をメモ
-   - [ ] MilestoneEscrow をデプロイ（引数を設定）
-     - `token`: 上でデプロイしたトークンアドレス
-     - `buyer`: Buyer用ウォレットアドレス
-     - `producer`: Producer用ウォレットアドレス
-     - `admin`: Admin用ウォレットアドレス
-     - `totalAmount`: 総額（例: 1000000）
-   - [ ] CONTRACT_ADDRESS をメモ
-
-4. **確認**
-   - [ ] Etherscan等でコントラクトを確認
-
----
-
-## 📋 フェーズ7: Vercelデプロイ（Day 4）
-
-### 7.1 Vercel設定
-- [ ] Vercelプロジェクト作成
-- [ ] 環境変数設定
-- [ ] デプロイ実行
-- [ ] 公開URL取得
-
-### 7.2 動作確認
-- [ ] 公開URLでWallet接続
-- [ ] 全機能の動作確認
-
----
-
-## ✅ 受け入れ基準（Definition of Done）
-
-### ローカル環境
-- [ ] Buyerがlockできる
-- [ ] Producerがsubmitできる
-- [ ] Buyerがapproveして解放送金が発生する
-- [ ] Adminがcancelして未解放分が返金される
-- [ ] dAppにタイムラインがイベントから表示される
-
-### Vercel公開環境
-- [ ] 公開URLで同等の操作が可能
-- [ ] UIに非投資宣言・監査未実施が明記されている
-
----
-
-## 📁 最終成果物
-
-```
-hackson/
-├── contracts/                    # Remix にコピペして使う
-│   ├── MilestoneEscrow.sol       # メインのエスクローコントラクト
-│   └── MockERC20.sol             # テスト用トークン
-├── apps/
-│   └── web/
-│       ├── app/
-│       │   └── page.tsx
-│       ├── components/
-│       ├── lib/
-│       ├── .env.example
-│       └── package.json
-├── README.md
-└── plan.md
-```
-
-**Remix上のファイル構成:**
-```
-remix-project/
-├── contracts/
-│   ├── MilestoneEscrow.sol
-│   └── MockERC20.sol
-└── tests/                        # Remix Unit Testing用
-    └── MilestoneEscrow_test.sol
-```
-
----
-
-## ⏰ 推定スケジュール（4日間）
-
-| Day | フェーズ | 内容 |
-|-----|---------|------|
-| 1 | 1, 2 | 環境構築、スマコン開発 |
-| 2 | 2, 3, 4 | スマコンテスト、MockERC20、dApp開発開始 |
-| 3 | 4, 5 | dApp完成、ローカルE2Eテスト |
-| 4 | 6, 7 | テストネット・Vercelデプロイ、最終確認 |
-
----
-
-## 🚨 注意事項
-
-- スマコンは監査未実施 → 実資金運用禁止
-- テストネット限定での運用
-- JPYCは「任意ERC20」として抽象化
-
----
-
-## 🔧 Remix IDE の使い方まとめ
-
-### アクセス
-👉 https://remix.ethereum.org
-
-### 主要プラグイン
-| プラグイン | 用途 |
-|-----------|------|
-| Solidity Compiler | コンパイル |
-| Deploy & Run Transactions | デプロイ・実行 |
-| Solidity Unit Testing | テスト |
-
-### Environment（実行環境）
-| 環境 | 用途 |
+| 項目 | 決定 |
 |------|------|
-| Remix VM (Shanghai) | ローカルテスト（無料・高速） |
-| Injected Provider - MetaMask | テストネット/メインネットデプロイ |
-
-### デプロイ時の注意
-- OpenZeppelin のインポートは Remix が自動で解決してくれる
-- `@openzeppelin/contracts/...` の形式で import できる
+| Admin | **廃止**（完全dApps） |
+| マイルストーン承認 | Producer申告 → 即支払い |
+| 紛争解決 | スコープ外 |
+| NFT | トレーサビリティ記録 + 裏で譲渡可能 |
+| マイルストーン | テンプレート固定（3カテゴリ） |
+| キャンセル | lock後は不可 |
+| 数量 | 1出品 = 1NFT = 1Buyer |
+| チェーン | Polygon Amoy (テスト) → Polygon PoS (本番) |
 
 ---
 
-## 🎯 次のステップ
+## チェーン設定
 
-**フェーズ1から始めよう！**
-1. `contracts/` フォルダを作成
-2. Foundryプロジェクト初期化
-3. `apps/web/` にNext.jsプロジェクト作成
+| 環境 | チェーン | Chain ID | RPC |
+|------|----------|----------|-----|
+| 開発 | Polygon Amoy | 80002 | https://rpc-amoy.polygon.technology |
+| 本番 | Polygon PoS | 137 | https://polygon-rpc.com |
 
+---
+
+## コントラクト構成
+
+```
+┌────────────────────────────────────┐
+│         ListingFactory             │
+│  (ERC721を兼ねる)                  │
+│                                    │
+│  - tokenAddress: JPYC              │
+│  - listings[]: 全Escrowアドレス    │
+│  - tokenIdToEscrow mapping         │
+│                                    │
+│  createListing() → Escrow + NFT    │
+│  getListings() → address[]         │
+│  tokenURI() → 動的メタデータ       │
+└────────────────────────────────────┘
+            │
+            │ creates
+            ▼
+┌────────────────────────────────────┐
+│       MilestoneEscrow              │
+│  (1出品 = 1コントラクト)           │
+│                                    │
+│  - producer: 出品者                │
+│  - buyer: 購入者 (lock時に確定)    │
+│  - totalAmount: 価格               │
+│  - milestones[]: テンプレから生成  │
+│  - locked: bool                    │
+│                                    │
+│  lock() → JPYC受取 + NFT転送       │
+│  submit(index) → 即JPYC支払い      │
+└────────────────────────────────────┘
+```
+
+---
+
+## マイルストーンテンプレート
+
+### wagyu (和牛) - 11ステップ
+```
+1.  素牛導入   1000 bps (10%)
+2.  肥育開始   1000 bps (10%)
+3.  肥育中1     500 bps (5%)
+4.  肥育中2     500 bps (5%)
+5.  肥育中3     500 bps (5%)
+6.  肥育中4     500 bps (5%)
+7.  肥育中5     500 bps (5%)
+8.  肥育中6     500 bps (5%)
+9.  出荷準備   1000 bps (10%)
+10. 出荷       2000 bps (20%)
+11. 納品完了   2000 bps (20%)
+─────────────────────────
+合計         10000 bps (100%)
+```
+
+### sake (日本酒) - 5ステップ
+```
+1. 仕込み   2000 bps (20%)
+2. 発酵     2000 bps (20%)
+3. 熟成     2000 bps (20%)
+4. 瓶詰め   2000 bps (20%)
+5. 出荷     2000 bps (20%)
+─────────────────────────
+合計       10000 bps (100%)
+```
+
+### craft (工芸品) - 4ステップ
+```
+1. 制作開始  2500 bps (25%)
+2. 窯焼き    2500 bps (25%)
+3. 絵付け    2500 bps (25%)
+4. 仕上げ    2500 bps (25%)
+─────────────────────────
+合計        10000 bps (100%)
+```
+
+---
+
+## 状態遷移
+
+```
+OPEN (出品中)
+  │
+  │ lock() - Buyerが購入
+  ▼
+ACTIVE (進行中)
+  │
+  │ submit(index) - Producer完了報告 × N回
+  ▼
+COMPLETED (全マイルストーン完了)
+```
+
+---
+
+## コントラクト詳細仕様
+
+### ListingFactory.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+contract ListingFactory is ERC721 {
+    address public tokenAddress;  // JPYC
+    address[] public listings;
+    mapping(uint256 => address) public tokenIdToEscrow;
+    uint256 private _nextTokenId;
+
+    event ListingCreated(
+        uint256 indexed tokenId,
+        address indexed escrow,
+        address indexed producer,
+        string category,
+        uint256 totalAmount
+    );
+
+    constructor(address _tokenAddress) ERC721("MilestoneNFT", "MSNFT") {
+        tokenAddress = _tokenAddress;
+    }
+
+    function createListing(
+        string calldata category,
+        string calldata title,
+        string calldata description,
+        uint256 totalAmount,
+        string calldata imageURI
+    ) external returns (address escrow, uint256 tokenId) {
+        // 1. tokenId採番
+        tokenId = _nextTokenId++;
+
+        // 2. MilestoneEscrow deploy
+        escrow = address(new MilestoneEscrow(
+            address(this),
+            tokenAddress,
+            msg.sender,  // producer
+            tokenId,
+            category,
+            title,
+            description,
+            totalAmount,
+            imageURI
+        ));
+
+        // 3. 記録
+        listings.push(escrow);
+        tokenIdToEscrow[tokenId] = escrow;
+
+        // 4. NFT mint (所有者 = Escrow)
+        _mint(escrow, tokenId);
+
+        emit ListingCreated(tokenId, escrow, msg.sender, category, totalAmount);
+    }
+
+    function getListings() external view returns (address[] memory) {
+        return listings;
+    }
+
+    function getListingCount() external view returns (uint256) {
+        return listings.length;
+    }
+
+    // tokenURI: Escrowから情報取得して動的生成
+    // → 実装時はbase64 JSON or 外部API
+}
+```
+
+### MilestoneEscrow.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
+contract MilestoneEscrow {
+    address public factory;
+    address public tokenAddress;
+    address public producer;
+    address public buyer;
+    uint256 public tokenId;
+    uint256 public totalAmount;
+    bool public locked;
+
+    string public category;
+    string public title;
+    string public description;
+    string public imageURI;
+
+    struct Milestone {
+        string name;
+        uint256 bps;  // 10000 = 100%
+        bool completed;
+    }
+    Milestone[] public milestones;
+
+    event Locked(address indexed buyer, uint256 amount);
+    event Completed(uint256 indexed index, string name, uint256 amount);
+
+    constructor(
+        address _factory,
+        address _tokenAddress,
+        address _producer,
+        uint256 _tokenId,
+        string memory _category,
+        string memory _title,
+        string memory _description,
+        uint256 _totalAmount,
+        string memory _imageURI
+    ) {
+        factory = _factory;
+        tokenAddress = _tokenAddress;
+        producer = _producer;
+        tokenId = _tokenId;
+        category = _category;
+        title = _title;
+        description = _description;
+        totalAmount = _totalAmount;
+        imageURI = _imageURI;
+
+        // カテゴリに応じたマイルストーン生成
+        _initMilestones(_category);
+    }
+
+    function _initMilestones(string memory _category) internal {
+        bytes32 cat = keccak256(bytes(_category));
+
+        if (cat == keccak256("wagyu")) {
+            milestones.push(Milestone("素牛導入", 1000, false));
+            milestones.push(Milestone("肥育開始", 1000, false));
+            milestones.push(Milestone("肥育中1", 500, false));
+            milestones.push(Milestone("肥育中2", 500, false));
+            milestones.push(Milestone("肥育中3", 500, false));
+            milestones.push(Milestone("肥育中4", 500, false));
+            milestones.push(Milestone("肥育中5", 500, false));
+            milestones.push(Milestone("肥育中6", 500, false));
+            milestones.push(Milestone("出荷準備", 1000, false));
+            milestones.push(Milestone("出荷", 2000, false));
+            milestones.push(Milestone("納品完了", 2000, false));
+        } else if (cat == keccak256("sake")) {
+            milestones.push(Milestone("仕込み", 2000, false));
+            milestones.push(Milestone("発酵", 2000, false));
+            milestones.push(Milestone("熟成", 2000, false));
+            milestones.push(Milestone("瓶詰め", 2000, false));
+            milestones.push(Milestone("出荷", 2000, false));
+        } else if (cat == keccak256("craft")) {
+            milestones.push(Milestone("制作開始", 2500, false));
+            milestones.push(Milestone("窯焼き", 2500, false));
+            milestones.push(Milestone("絵付け", 2500, false));
+            milestones.push(Milestone("仕上げ", 2500, false));
+        }
+    }
+
+    function lock() external {
+        require(!locked, "Already locked");
+
+        // JPYC受取
+        IERC20(tokenAddress).transferFrom(msg.sender, address(this), totalAmount);
+
+        // buyer確定
+        buyer = msg.sender;
+        locked = true;
+
+        // NFTをbuyerに転送
+        IERC721(factory).transferFrom(address(this), msg.sender, tokenId);
+
+        emit Locked(msg.sender, totalAmount);
+    }
+
+    function submit(uint256 index) external {
+        require(msg.sender == producer, "Only producer");
+        require(locked, "Not locked");
+        require(index < milestones.length, "Invalid index");
+        require(!milestones[index].completed, "Already completed");
+
+        // 完了フラグ
+        milestones[index].completed = true;
+
+        // 支払額計算
+        uint256 amount = (totalAmount * milestones[index].bps) / 10000;
+
+        // 即時支払い
+        IERC20(tokenAddress).transfer(producer, amount);
+
+        emit Completed(index, milestones[index].name, amount);
+    }
+
+    // View functions
+    function getMilestones() external view returns (Milestone[] memory) {
+        return milestones;
+    }
+
+    function getMilestoneCount() external view returns (uint256) {
+        return milestones.length;
+    }
+
+    function getProgress() external view returns (uint256 completed, uint256 total) {
+        total = milestones.length;
+        for (uint256 i = 0; i < milestones.length; i++) {
+            if (milestones[i].completed) completed++;
+        }
+    }
+
+    function getStatus() external view returns (string memory) {
+        if (!locked) return "open";
+
+        for (uint256 i = 0; i < milestones.length; i++) {
+            if (!milestones[i].completed) return "active";
+        }
+        return "completed";
+    }
+}
+```
+
+---
+
+## フロントエンド構成
+
+### ページ構成
+```
+/                      → 出品一覧 + 出品フォーム
+/listing/[address]     → 詳細・購入・マイルストーン操作
+```
+
+### 主要コンポーネント
+```
+apps/web/src/
+├── app/
+│   ├── page.tsx                 # 一覧ページ
+│   └── listing/[address]/
+│       └── page.tsx             # 詳細ページ
+├── components/
+│   ├── Header.tsx               # ウォレット接続
+│   ├── ListingCard.tsx          # 出品カード
+│   ├── CreateListingForm.tsx    # 出品フォーム
+│   ├── ListingDetail.tsx        # 詳細表示
+│   ├── MilestoneList.tsx        # マイルストーン一覧
+│   └── EventTimeline.tsx        # イベント履歴
+├── lib/
+│   ├── config.ts                # 環境変数
+│   ├── contracts.ts             # ABI定義
+│   └── hooks.ts                 # Contract hooks
+└── api/
+    └── nft/[tokenId]/
+        ├── metadata/route.ts    # NFTメタデータ
+        └── image/route.ts       # NFT画像
+```
+
+### hooks.ts 主要関数
+```typescript
+// Factory
+useCreateListing(category, title, description, totalAmount, imageURI)
+useListings() → address[]
+
+// Escrow (per listing)
+useEscrowInfo(address) → { producer, buyer, totalAmount, locked, ... }
+useMilestones(address) → Milestone[]
+useLock(address)
+useSubmit(address, index)
+useEvents(address) → Event[]
+```
+
+---
+
+## 環境変数
+
+```bash
+# .env.local (Amoy)
+NEXT_PUBLIC_RPC_URL=https://rpc-amoy.polygon.technology
+NEXT_PUBLIC_CHAIN_ID=80002
+NEXT_PUBLIC_FACTORY_ADDRESS=<デプロイ後>
+NEXT_PUBLIC_TOKEN_ADDRESS=<MockERC20アドレス>
+NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE=https://amoy.polygonscan.com/tx/
+```
+
+---
+
+## 実装タスク
+
+### Phase 1: コントラクト
+- [ ] ListingFactory.sol 作成
+- [ ] MilestoneEscrow.sol 作成
+- [ ] MockERC20.sol 作成（既存流用可）
+- [ ] Remix でテスト
+- [ ] Amoy にデプロイ
+
+### Phase 2: フロントエンド基盤
+- [ ] 既存apps/webをv2用にリファクタ
+- [ ] Factory用ABI追加
+- [ ] Escrow用ABI追加
+- [ ] hooks.ts 更新
+
+### Phase 3: 一覧ページ
+- [ ] 出品一覧表示
+- [ ] 出品フォーム
+- [ ] createListing連携
+
+### Phase 4: 詳細ページ
+- [ ] /listing/[address] ルート作成
+- [ ] 詳細情報表示
+- [ ] 購入(lock)機能
+- [ ] マイルストーン完了報告(submit)
+- [ ] イベント履歴表示
+
+### Phase 5: NFT API
+- [ ] /api/nft/[tokenId]/metadata 更新
+- [ ] /api/nft/[tokenId]/image 更新
+
+---
+
+## テストシナリオ
+
+### 出品フロー
+1. Producer がウォレット接続
+2. カテゴリ選択、情報入力、出品
+3. Escrowコントラクト生成確認
+4. NFT発行確認（所有者=Escrow）
+5. 一覧に表示確認
+
+### 購入フロー
+1. Buyer がウォレット接続
+2. 一覧から出品選択
+3. JPYC approve
+4. lock() 実行
+5. JPYC残高減少確認
+6. NFT所有者がBuyerに変更確認
+7. 状態が「進行中」に変更確認
+
+### マイルストーンフロー
+1. Producer がウォレット接続
+2. 詳細ページで「完了報告」クリック
+3. submit() 実行
+4. JPYC残高増加確認
+5. マイルストーンにチェック表示
+6. イベント履歴に追加確認
+
+---
+
+## MVP対象外
+
+- カスタムマイルストーン
+- 出品取り下げ
+- 動的NFT画像
+- カテゴリフィルタ
+- マイページ
+- IPFS画像アップロード
+- マイルストーン順序制約

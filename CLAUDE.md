@@ -1,96 +1,118 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+plan.mdを確認して実行すること
 
 ## Project Overview
 
-Wagyu Milestone Escrow MVP - A blockchain dApp for milestone-driven escrow payments for B2B cattle fattening transactions. Funds are locked and released progressively as milestones are completed.
+Wagyu Milestone Escrow v2 - A decentralized marketplace dApp where producers list products (wagyu, sake, craft) and buyers purchase them. JPYC is automatically released to producers as milestones are completed. No admin role - fully trustless.
 
-**Key concept**: Payment conditions are tied to fattening process stages (E1-E6), not investment returns. This is B2B payment infrastructure, not an investment product.
+**Key concept**: 1 listing = 1 Escrow contract = 1 NFT. Producer self-reports milestone completion, triggering immediate JPYC payment.
 
 ## Architecture
 
 ```
 hackson/
-├── contracts/              # Solidity smart contracts (for Remix IDE)
-│   ├── MilestoneEscrow.sol # Main escrow contract (1 lot = 1 contract)
+├── contracts/              # Solidity smart contracts (Remix IDE)
+│   ├── ListingFactory.sol  # ERC721 + creates Escrow per listing
+│   ├── MilestoneEscrow.sol # Per-listing escrow (Producer/Buyer only)
 │   └── MockERC20.sol       # Test token
 └── apps/web/               # Next.js dApp (App Router, TypeScript)
 ```
 
-### Smart Contract (MilestoneEscrow.sol)
+### Contract Architecture (v2)
 
-- **Pattern**: 1 lot = 1 contract instance
-- **Roles**: Buyer (lock), Producer (submit & auto-receive), Admin (cancel) - addresses fixed at deploy
-- **State**: Milestones array with PENDING → COMPLETED transitions (auto-payment on submit)
-- **Release rates (bps, 10000=100%)**: E1(1000), E2(1000), E3_01-E3_06(500 each), E4(1000), E5(2000), E6(2000)
-- **Events**: `Locked`, `Completed`, `Cancelled` - dApp timeline is built from events only (no DB)
-- **Auto-payment**: When Producer submits a milestone, JPYC is automatically transferred (no Buyer approval needed)
+**ListingFactory (ERC721)**
+- `createListing(category, title, description, totalAmount, imageURI)` → deploys new MilestoneEscrow + mints NFT
+- NFT initially owned by Escrow contract, transferred to Buyer on `lock()`
+- `listings[]` array for enumeration, `tokenIdToEscrow` mapping
+
+**MilestoneEscrow (per listing)**
+- **Roles**: Producer (fixed at creation), Buyer (set on lock)
+- **No Admin** - fully decentralized, no cancel after lock
+- **State flow**: OPEN → ACTIVE → COMPLETED
+- **Milestones**: Auto-generated from category template (wagyu/sake/craft)
+- `lock()`: Buyer sends JPYC, receives NFT
+- `submit(index)`: Producer completes milestone, receives JPYC immediately
+
+### Milestone Templates (bps, 10000=100%)
+
+**wagyu** (11 steps): 素牛導入(1000), 肥育開始(1000), 肥育中1-6(500×6), 出荷準備(1000), 出荷(2000), 納品完了(2000)
+
+**sake** (5 steps): 仕込み, 発酵, 熟成, 瓶詰め, 出荷 (2000 each)
+
+**craft** (4 steps): 制作開始, 窯焼き, 絵付け, 仕上げ (2500 each)
 
 ### dApp (apps/web/)
 
-- **Stack**: Next.js (App Router), TypeScript, viem, Tailwind CSS
-- **Single page**: Wallet connect → Contract summary → Role display → Actions → Milestones list → Event timeline
-- **No backend/DB**: All state from on-chain events and contract reads
+- **Stack**: Next.js 15 (App Router), TypeScript, viem, Tailwind CSS
+- **Pages**: `/` (listing + create form), `/listing/[address]` (detail + actions)
+- **No backend/DB**: All state from on-chain reads and events
 
 ## Build & Run Commands
 
 ### Smart Contracts (Remix IDE)
 
-Contracts are developed and tested in Remix IDE (https://remix.ethereum.org):
-
-1. Copy contract files to Remix
-2. Compile with Solidity Compiler plugin
-3. Test with "Remix VM (Shanghai)" environment
-4. Deploy to testnet with "Injected Provider - MetaMask"
+1. Copy contract files to Remix (https://remix.ethereum.org)
+2. Compile with Solidity 0.8.20+
+3. Test with "Remix VM (Shanghai)"
+4. Deploy to Polygon Amoy with "Injected Provider - MetaMask"
 
 ### dApp
 
 ```bash
 cd apps/web
 pnpm install
-pnpm dev          # Local development
+pnpm dev          # Local development (http://localhost:3000)
 pnpm build        # Production build
 pnpm lint         # Lint check
 ```
 
 ## Environment Variables
 
-```
-NEXT_PUBLIC_RPC_URL           # EVM RPC endpoint
-NEXT_PUBLIC_CHAIN_ID          # Target chain ID
-NEXT_PUBLIC_CONTRACT_ADDRESS  # Deployed MilestoneEscrow address
-NEXT_PUBLIC_TOKEN_ADDRESS     # ERC20 token address
-NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE  # (optional) Block explorer base URL
+```bash
+# Polygon Amoy (testnet)
+NEXT_PUBLIC_RPC_URL=https://rpc-amoy.polygon.technology
+NEXT_PUBLIC_CHAIN_ID=80002
+NEXT_PUBLIC_FACTORY_ADDRESS=<ListingFactory address>
+NEXT_PUBLIC_TOKEN_ADDRESS=<MockERC20 or JPYC address>
+NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE=https://amoy.polygonscan.com/tx/
+
+# Polygon PoS (mainnet)
+# NEXT_PUBLIC_RPC_URL=https://polygon-rpc.com
+# NEXT_PUBLIC_CHAIN_ID=137
 ```
 
 ## Key Implementation Details
 
-### Contract Security Order
-State updates must happen before external calls (ERC20 transfers) to prevent reentrancy.
+### Contract Security
+- State updates before external calls (CEI pattern)
+- `lock()`: Once only, anyone can become Buyer
+- `submit()`: Producer only, requires locked, milestone must be incomplete
+- No cancel after lock - funds flow to completion
 
-### Guards
-- `lock()`: Buyer only, once only
-- `submit()`: Producer only, requires locked state, milestone must be PENDING, auto-transfers JPYC
-- `cancel()`: Admin only, refunds unlocked amount to Buyer
+### NFT Flow
+1. `createListing()` → NFT minted to Escrow contract address
+2. `lock()` → NFT transferred from Escrow to Buyer
+3. Standard ERC721 transfer allowed after (secondary market ready)
 
-### Required UI Disclaimers
-Must display:
-- "This is B2B payment infrastructure, not an investment product"
-- "No yields, resale, fractional ownership, or investment solicitation"
-- "Milestones are evidence logs, not payment conditions"
-- "Unaudited contract (demo only)"
+### Frontend Hooks Pattern
+```typescript
+// Factory operations
+useCreateListing(category, title, description, totalAmount, imageURI)
+useListings() → address[]
 
-## Testing Checklist
-
-- lock: non-buyer rejected, double-lock rejected
-- submit: pre-lock rejected, non-producer rejected, state transition works, auto-payment correct, double-submit rejected
-- cancel: non-admin rejected, refund correct, post-cancel operations rejected
-- bps total equals 10000
+// Per-Escrow operations
+useEscrowInfo(address) → { producer, buyer, totalAmount, locked, ... }
+useMilestones(address) → Milestone[]
+useLock(address)
+useSubmit(address, index)
+useEvents(address) → Event[]
+```
 
 ## Deployment
 
 1. Deploy MockERC20 via Remix → note token address
-2. Deploy MilestoneEscrow with (token, buyer, producer, admin, totalAmount)
-3. Set environment variables in Vercel
+2. Deploy ListingFactory with (tokenAddress)
+3. Set NEXT_PUBLIC_FACTORY_ADDRESS and NEXT_PUBLIC_TOKEN_ADDRESS
 4. Deploy dApp to Vercel

@@ -1,29 +1,20 @@
 "use client";
 
-import { useState, useCallback, useMemo, Suspense, lazy } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Box, Container, Typography, Grid } from "@mui/material";
+import { Box, Container, Typography, Grid, CircularProgress, Alert } from "@mui/material";
 import {
   Header,
   ConnectWallet,
-  ContractSummary,
-  Actions,
-  MilestonesList,
-  HeroNFT,
+  ListingCard,
+  CreateListingForm,
 } from "@/components";
 import {
   useWallet,
-  useContractData,
-  useContractActions,
+  useListingSummaries,
+  useTokenInfo,
 } from "@/lib/hooks";
 import { I18nContext, translations, type Locale, type TranslationKey } from "@/lib/i18n";
-
-// Lazy load Three.js background for performance
-const MarbleBackground = lazy(() =>
-  import("@/components/three/MarbleBackground").then((mod) => ({
-    default: mod.default,
-  }))
-);
 
 export default function Home() {
   const [locale, setLocale] = useState<Locale>("ja");
@@ -35,25 +26,23 @@ export default function Home() {
   }), [locale]);
 
   const wallet = useWallet();
-  const contractData = useContractData();
+  const { summaries, isLoading, error, refetch } = useListingSummaries();
+  const { symbol, decimals } = useTokenInfo();
 
-  const handleSuccess = useCallback(() => {
-    contractData.refetch();
-  }, [contractData]);
-
-  const actions = useContractActions(handleSuccess);
-  const userRole = contractData.getUserRole(wallet.address);
+  const handleListingCreated = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const { t } = i18nValue;
+
+  // Filter listings by status
+  const openListings = summaries.filter((s) => s.status === "open");
+  const activeListings = summaries.filter((s) => s.status === "active");
+  const completedListings = summaries.filter((s) => s.status === "completed");
 
   return (
     <I18nContext.Provider value={i18nValue}>
       <div className="app-shell">
-        {/* Three.js Background */}
-        <Suspense fallback={null}>
-          <MarbleBackground />
-        </Suspense>
-
         {/* Header */}
         <Header onLocaleChange={setLocale} />
 
@@ -71,25 +60,21 @@ export default function Home() {
             <Box
               component="section"
               sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                gap: { xs: 3, md: 4 },
-                py: { xs: 3, md: 4 },
+                textAlign: "center",
+                py: { xs: 4, md: 6 },
                 mb: 4,
               }}
             >
-              {/* Hero Copy */}
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, ease: "easeOut" }}
-                style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
               >
                 <Typography
                   variant="overline"
                   sx={{
-                    color: 'var(--wagyu-gold)',
-                    letterSpacing: '0.15em',
+                    color: "var(--wagyu-gold)",
+                    letterSpacing: "0.15em",
                     fontWeight: 600,
                     mb: 1,
                   }}
@@ -99,20 +84,12 @@ export default function Home() {
                 <Typography
                   variant="h2"
                   sx={{
-                    fontFamily: 'var(--font-display)',
+                    fontFamily: "var(--font-display)",
                     fontWeight: 700,
-                    fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
+                    fontSize: { xs: "1.75rem", sm: "2.25rem", md: "2.75rem" },
                     lineHeight: 1.2,
-                    color: 'var(--color-text)',
+                    color: "var(--color-text)",
                     mb: 2,
-                    '& .accent': {
-                      background: 'linear-gradient(135deg, var(--wagyu-gold) 0%, var(--wagyu-gold-light) 50%, var(--wagyu-gold) 100%)',
-                      backgroundSize: '200% auto',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      animation: 'shimmer 3s ease-in-out infinite',
-                    },
                   }}
                 >
                   {t("heroTitle")}
@@ -120,99 +97,208 @@ export default function Home() {
                 <Typography
                   variant="body1"
                   sx={{
-                    color: 'var(--color-text-secondary)',
-                    maxWidth: 480,
+                    color: "var(--color-text-secondary)",
+                    maxWidth: 600,
+                    mx: "auto",
                     lineHeight: 1.7,
                   }}
                 >
                   {t("appSubtitle")}
                 </Typography>
               </motion.div>
-
-              {/* Hero Visual */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Box
-                  sx={{
-                    position: 'relative',
-                    width: { xs: 280, sm: 320 },
-                    aspectRatio: '4 / 5',
-                  }}
-                >
-                  <HeroNFT tokenId={1} />
-                </Box>
-              </motion.div>
             </Box>
 
-            {/* Main Grid */}
-            <Grid container spacing={3}>
-              {/* Left Sidebar */}
-              <Grid
-                size={{ xs: 12, lg: 5 }}
-                sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
-              >
+            {/* Wallet & Create */}
+            <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 3, mb: 4 }}>
+              <Box sx={{ flex: 1 }}>
                 <ConnectWallet
                   address={wallet.address}
                   isConnecting={wallet.isConnecting}
                   error={wallet.error}
-                  userRole={userRole}
+                  userRole="none"
                   onConnect={wallet.connect}
                   onDisconnect={wallet.disconnect}
                 />
-
+              </Box>
+              {wallet.address && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.1 }}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  <ContractSummary
-                    summary={contractData.summary}
-                    tokenSymbol={contractData.tokenSymbol}
-                    tokenDecimals={contractData.tokenDecimals}
-                    isLoading={contractData.isLoading}
-                    error={contractData.error}
+                  <CreateListingForm onSuccess={handleListingCreated} />
+                </motion.div>
+              )}
+            </Box>
+
+            {/* Loading */}
+            {isLoading && (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+                <CircularProgress sx={{ color: "var(--wagyu-gold)" }} />
+              </Box>
+            )}
+
+            {/* Error */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 4, borderRadius: 2 }}>
+                {error}
+              </Alert>
+            )}
+
+            {/* Open Listings */}
+            {openListings.length > 0 && (
+              <Box component="section" sx={{ mb: 6 }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    mb: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      background: "var(--status-success)",
+                    }}
                   />
-                </motion.div>
+                  {locale === "ja" ? "出品中" : "Open Listings"}
+                  <Typography
+                    component="span"
+                    sx={{ color: "var(--color-text-muted)", fontWeight: 400 }}
+                  >
+                    ({openListings.length})
+                  </Typography>
+                </Typography>
+                <Grid container spacing={3}>
+                  {openListings.map((listing) => (
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={listing.escrowAddress}>
+                      <ListingCard
+                        listing={listing}
+                        tokenSymbol={symbol}
+                        tokenDecimals={decimals}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
+            {/* Active Listings */}
+            {activeListings.length > 0 && (
+              <Box component="section" sx={{ mb: 6 }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    mb: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
                 >
-                  <Actions
-                    address={wallet.address}
-                    summary={contractData.summary}
-                    milestones={contractData.milestones}
-                    userRole={userRole}
-                    onLock={actions.lock}
-                    onSubmit={actions.submit}
-                    onCancel={actions.cancel}
-                    isLoading={actions.isLoading}
-                    error={actions.error}
-                    txHash={actions.txHash}
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      background: "var(--status-info)",
+                    }}
                   />
-                </motion.div>
-              </Grid>
+                  {locale === "ja" ? "進行中" : "Active Listings"}
+                  <Typography
+                    component="span"
+                    sx={{ color: "var(--color-text-muted)", fontWeight: 400 }}
+                  >
+                    ({activeListings.length})
+                  </Typography>
+                </Typography>
+                <Grid container spacing={3}>
+                  {activeListings.map((listing) => (
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={listing.escrowAddress}>
+                      <ListingCard
+                        listing={listing}
+                        tokenSymbol={symbol}
+                        tokenDecimals={decimals}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
 
-              {/* Right Content */}
-              <Grid size={{ xs: 12, lg: 7 }}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
+            {/* Completed Listings */}
+            {completedListings.length > 0 && (
+              <Box component="section" sx={{ mb: 6 }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 600,
+                    color: "var(--color-text)",
+                    mb: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
                 >
-                  <MilestonesList milestones={contractData.milestones} />
-                </motion.div>
-              </Grid>
-            </Grid>
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      background: "var(--color-text-muted)",
+                    }}
+                  />
+                  {locale === "ja" ? "完了" : "Completed"}
+                  <Typography
+                    component="span"
+                    sx={{ color: "var(--color-text-muted)", fontWeight: 400 }}
+                  >
+                    ({completedListings.length})
+                  </Typography>
+                </Typography>
+                <Grid container spacing={3}>
+                  {completedListings.map((listing) => (
+                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={listing.escrowAddress}>
+                      <ListingCard
+                        listing={listing}
+                        tokenSymbol={symbol}
+                        tokenDecimals={decimals}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && summaries.length === 0 && (
+              <Box
+                sx={{
+                  textAlign: "center",
+                  py: 8,
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  {locale === "ja" ? "まだ出品がありません" : "No listings yet"}
+                </Typography>
+                <Typography variant="body2">
+                  {locale === "ja"
+                    ? "ウォレットを接続して最初の出品を作成しましょう"
+                    : "Connect your wallet and create the first listing"}
+                </Typography>
+              </Box>
+            )}
           </Container>
         </Box>
 
@@ -221,7 +307,7 @@ export default function Home() {
           component="footer"
           className="content-layer"
           sx={{
-            borderTop: '1px solid var(--color-border)',
+            borderTop: "1px solid var(--color-border)",
             py: 4,
             mt: 4,
           }}
@@ -229,14 +315,14 @@ export default function Home() {
           <Container maxWidth="lg">
             <Box
               sx={{
-                display: 'flex',
-                flexDirection: { xs: 'column', sm: 'row' },
-                alignItems: { xs: 'flex-start', sm: 'center' },
-                justifyContent: 'space-between',
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: { xs: "flex-start", sm: "center" },
+                justifyContent: "space-between",
                 gap: 3,
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   component="img"
                   src="/jpyc-logo.png"
@@ -244,9 +330,9 @@ export default function Home() {
                   sx={{
                     width: 36,
                     height: 36,
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '2px solid var(--glass-border)',
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "2px solid var(--glass-border)",
                   }}
                 />
                 <Box>
@@ -254,14 +340,14 @@ export default function Home() {
                     variant="body2"
                     sx={{
                       fontWeight: 500,
-                      color: 'var(--color-text-secondary)',
+                      color: "var(--color-text-secondary)",
                     }}
                   >
                     {t("appTitle")}
                   </Typography>
                   <Typography
                     variant="caption"
-                    sx={{ color: 'var(--color-text-muted)' }}
+                    sx={{ color: "var(--color-text-muted)" }}
                   >
                     {t("appSubtitle")}
                   </Typography>
@@ -269,7 +355,7 @@ export default function Home() {
               </Box>
               <Typography
                 variant="caption"
-                sx={{ color: 'var(--color-text-muted)' }}
+                sx={{ color: "var(--color-text-muted)" }}
               >
                 © {new Date().getFullYear()} {t("appTitle")}
               </Typography>

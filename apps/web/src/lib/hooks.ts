@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { type Address, type Hash } from "viem";
 import { createClient, createWallet, config, getChain } from "./config";
-import { ESCROW_ABI, ERC20_ABI } from "./abi";
-import type { ContractSummary, Milestone, MilestoneState, TimelineEvent, UserRole } from "./types";
+import { FACTORY_ABI, ESCROW_ABI, ERC20_ABI } from "./abi";
+import type { EscrowInfo, Milestone, ListingSummary, TimelineEvent, UserRole } from "./types";
 
-// Wallet connection hook
+// ============ Wallet Connection ============
+
 export function useWallet() {
   const [address, setAddress] = useState<Address | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -102,18 +103,352 @@ export function useWallet() {
   return { address, isConnecting, error, connect, disconnect };
 }
 
-// Contract data hook
-export function useContractData() {
-  const [summary, setSummary] = useState<ContractSummary | null>(null);
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
-  const [tokenSymbol, setTokenSymbol] = useState<string>("");
-  const [tokenDecimals, setTokenDecimals] = useState<number>(18);
+// ============ Factory Hooks ============
+
+export function useListings() {
+  const [listings, setListings] = useState<Address[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    if (!config.contractAddress) {
-      setError("コントラクトアドレスが設定されていません");
+  const fetchListings = useCallback(async () => {
+    if (!config.factoryAddress) {
+      setError("Factory address not configured");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const client = createClient();
+      const result = await client.readContract({
+        address: config.factoryAddress,
+        abi: FACTORY_ABI,
+        functionName: "getListings",
+      });
+      setListings(result as Address[]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch listings");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchListings();
+  }, [fetchListings]);
+
+  return { listings, isLoading, error, refetch: fetchListings };
+}
+
+export function useListingSummaries() {
+  const { listings, isLoading: listingsLoading, error: listingsError, refetch } = useListings();
+  const [summaries, setSummaries] = useState<ListingSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSummaries = async () => {
+      if (listings.length === 0) {
+        setSummaries([]);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const client = createClient();
+        const summaryPromises = listings.map(async (escrowAddress) => {
+          try {
+            const [core, meta, progress] = await Promise.all([
+              client.readContract({
+                address: escrowAddress,
+                abi: ESCROW_ABI,
+                functionName: "getCore",
+              }),
+              client.readContract({
+                address: escrowAddress,
+                abi: ESCROW_ABI,
+                functionName: "getMeta",
+              }),
+              client.readContract({
+                address: escrowAddress,
+                abi: ESCROW_ABI,
+                functionName: "getProgress",
+              }),
+            ]) as [
+              {
+                factory: Address;
+                tokenAddress: Address;
+                producer: Address;
+                buyer: Address;
+                tokenId: bigint;
+                totalAmount: bigint;
+                releasedAmount: bigint;
+                locked: boolean;
+              },
+              {
+                category: string;
+                title: string;
+                description: string;
+                imageURI: string;
+                status: string;
+              },
+              [bigint, bigint]
+            ];
+
+            return {
+              escrowAddress,
+              tokenId: core.tokenId,
+              producer: core.producer,
+              buyer: core.buyer,
+              totalAmount: core.totalAmount,
+              releasedAmount: core.releasedAmount,
+              locked: core.locked,
+              category: meta.category,
+              title: meta.title,
+              description: meta.description,
+              imageURI: meta.imageURI,
+              status: meta.status as "open" | "active" | "completed",
+              progress: {
+                completed: Number(progress[0]),
+                total: Number(progress[1]),
+              },
+            };
+          } catch {
+            return null;
+          }
+        });
+
+        const results = await Promise.all(summaryPromises);
+        setSummaries(results.filter((s): s is ListingSummary => s !== null));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch summaries");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSummaries();
+  }, [listings]);
+
+  return {
+    summaries,
+    isLoading: listingsLoading || isLoading,
+    error: listingsError || error,
+    refetch,
+  };
+}
+
+// カテゴリ名からcategoryType (uint8) への変換
+export function categoryToType(category: string): number {
+  switch (category.toLowerCase()) {
+    case "wagyu": return 0;
+    case "sake": return 1;
+    case "craft": return 2;
+    default: return 3;
+  }
+}
+
+// categoryType (uint8) からカテゴリ名への変換
+export function typeToCategory(categoryType: number): string {
+  switch (categoryType) {
+    case 0: return "wagyu";
+    case 1: return "sake";
+    case 2: return "craft";
+    default: return "other";
+  }
+}
+
+// マイルストーン名をcode + categoryTypeから生成
+const MILESTONE_NAMES: Record<number, string[]> = {
+  0: ["素牛導入", "肥育開始", "肥育中1", "肥育中2", "肥育中3", "肥育中4", "肥育中5", "肥育中6", "出荷準備", "出荷", "納品完了"],
+  1: ["仕込み", "発酵", "熟成", "瓶詰め", "出荷"],
+  2: ["制作開始", "窯焼き", "絵付け", "仕上げ"],
+  3: ["完了"],
+};
+
+export function getMilestoneName(categoryType: number, code: number): string {
+  const names = MILESTONE_NAMES[categoryType] || MILESTONE_NAMES[3];
+  return names[code] || `Step ${code + 1}`;
+}
+
+export function useCreateListing(onSuccess?: (escrow: Address, tokenId: bigint) => void) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<Hash | null>(null);
+
+  const createListing = useCallback(
+    async (
+      categoryType: number,
+      title: string,
+      description: string,
+      totalAmount: bigint,
+      imageURI: string
+    ) => {
+      setIsLoading(true);
+      setError(null);
+      setTxHash(null);
+
+      try {
+        const wallet = createWallet();
+        const client = createClient();
+        if (!wallet) throw new Error("Walletが接続されていません");
+
+        const [account] = await wallet.getAddresses();
+
+        const hash = await wallet.writeContract({
+          address: config.factoryAddress,
+          abi: FACTORY_ABI,
+          functionName: "createListing",
+          args: [categoryType, title, description, totalAmount, imageURI],
+          account,
+        });
+
+        const receipt = await client.waitForTransactionReceipt({ hash });
+        setTxHash(hash);
+
+        // Parse ListingCreated event to get escrow address and tokenId
+        const listingCreatedEvent = receipt.logs.find((log) => {
+          try {
+            return log.topics[0] === "0x" + "ListingCreated".padEnd(64, "0");
+          } catch {
+            return false;
+          }
+        });
+
+        if (listingCreatedEvent) {
+          // Get from return values by reading the contract
+          const listingCount = await client.readContract({
+            address: config.factoryAddress,
+            abi: FACTORY_ABI,
+            functionName: "getListingCount",
+          });
+
+          const escrow = await client.readContract({
+            address: config.factoryAddress,
+            abi: FACTORY_ABI,
+            functionName: "listings",
+            args: [listingCount - 1n],
+          });
+
+          onSuccess?.(escrow as Address, listingCount - 1n);
+        } else {
+          // Fallback: get latest listing
+          const listingCount = await client.readContract({
+            address: config.factoryAddress,
+            abi: FACTORY_ABI,
+            functionName: "getListingCount",
+          });
+
+          const escrow = await client.readContract({
+            address: config.factoryAddress,
+            abi: FACTORY_ABI,
+            functionName: "listings",
+            args: [listingCount - 1n],
+          });
+
+          onSuccess?.(escrow as Address, listingCount - 1n);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "出品に失敗しました");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [onSuccess]
+  );
+
+  return { createListing, isLoading, error, txHash };
+}
+
+// ============ Escrow Hooks (per listing) ============
+
+export function useEscrowInfo(escrowAddress: Address | null) {
+  const [info, setInfo] = useState<EscrowInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchInfo = useCallback(async () => {
+    if (!escrowAddress) {
+      setInfo(null);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const client = createClient();
+      const [core, meta] = await Promise.all([
+        client.readContract({
+          address: escrowAddress,
+          abi: ESCROW_ABI,
+          functionName: "getCore",
+        }),
+        client.readContract({
+          address: escrowAddress,
+          abi: ESCROW_ABI,
+          functionName: "getMeta",
+        }),
+      ]) as [
+        {
+          factory: Address;
+          tokenAddress: Address;
+          producer: Address;
+          buyer: Address;
+          tokenId: bigint;
+          totalAmount: bigint;
+          releasedAmount: bigint;
+          locked: boolean;
+        },
+        {
+          category: string;
+          title: string;
+          description: string;
+          imageURI: string;
+          status: string;
+        }
+      ];
+
+      setInfo({
+        factory: core.factory,
+        tokenAddress: core.tokenAddress,
+        producer: core.producer,
+        buyer: core.buyer,
+        tokenId: core.tokenId,
+        totalAmount: core.totalAmount,
+        releasedAmount: core.releasedAmount,
+        locked: core.locked,
+        category: meta.category,
+        title: meta.title,
+        description: meta.description,
+        imageURI: meta.imageURI,
+        status: meta.status as "open" | "active" | "completed",
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch escrow info");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [escrowAddress]);
+
+  useEffect(() => {
+    fetchInfo();
+  }, [fetchInfo]);
+
+  return { info, isLoading, error, refetch: fetchInfo };
+}
+
+export function useMilestones(escrowAddress: Address | null, categoryType?: number) {
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMilestones = useCallback(async () => {
+    if (!escrowAddress) {
+      setMilestones([]);
       return;
     }
 
@@ -123,121 +458,144 @@ export function useContractData() {
     try {
       const client = createClient();
 
-      // Get summary
-      const summaryResult = await client.readContract({
-        address: config.contractAddress,
-        abi: ESCROW_ABI,
-        functionName: "getSummary",
-      });
-
-      const [
-        token,
-        buyer,
-        producer,
-        admin,
-        totalAmount,
-        lockedAmount,
-        releasedAmount,
-        refundedAmount,
-        cancelled,
-        milestonesCount,
-      ] = summaryResult;
-
-      setSummary({
-        token,
-        buyer,
-        producer,
-        admin,
-        totalAmount,
-        lockedAmount,
-        releasedAmount,
-        refundedAmount,
-        cancelled,
-        milestonesCount,
-      });
-
-      // Get token info
-      const [symbol, decimals] = await Promise.all([
-        client.readContract({
-          address: token,
-          abi: ERC20_ABI,
-          functionName: "symbol",
-        }),
-        client.readContract({
-          address: token,
-          abi: ERC20_ABI,
-          functionName: "decimals",
-        }),
-      ]);
-
-      setTokenSymbol(symbol);
-      setTokenDecimals(decimals);
-
-      // Get milestones
-      const milestonesData: Milestone[] = [];
-      for (let i = 0; i < Number(milestonesCount); i++) {
-        const m = await client.readContract({
-          address: config.contractAddress,
+      // Get categoryType if not provided
+      let catType = categoryType;
+      if (catType === undefined) {
+        catType = await client.readContract({
+          address: escrowAddress,
           abi: ESCROW_ABI,
-          functionName: "milestone",
-          args: [BigInt(i)],
-        });
-
-        milestonesData.push({
-          code: m[0],
-          bps: m[1],
-          state: m[2] as MilestoneState,
-          evidenceHash: m[3],
-          evidenceText: m[4],
-          completedAt: m[5],
-          releasedAmount: m[6],
-        });
+          functionName: "categoryType",
+        }) as number;
       }
 
-      setMilestones(milestonesData);
+      const result = await client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "getMilestones",
+      });
+
+      const milestoneData = result as Array<{ bps: bigint; completed: boolean }>;
+      setMilestones(
+        milestoneData.map((m, index) => ({
+          code: index,
+          bps: m.bps,
+          completed: m.completed,
+          name: getMilestoneName(catType!, index),
+        }))
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "データ取得エラー");
+      setError(err instanceof Error ? err.message : "Failed to fetch milestones");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [escrowAddress, categoryType]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchMilestones();
+  }, [fetchMilestones]);
 
-  const getUserRole = useCallback(
-    (userAddress: Address | null): UserRole => {
-      if (!userAddress || !summary) return "none";
-      const lower = userAddress.toLowerCase();
-      if (lower === summary.buyer.toLowerCase()) return "buyer";
-      if (lower === summary.producer.toLowerCase()) return "producer";
-      if (lower === summary.admin.toLowerCase()) return "admin";
-      return "none";
-    },
-    [summary]
-  );
-
-  return {
-    summary,
-    milestones,
-    tokenSymbol,
-    tokenDecimals,
-    isLoading,
-    error,
-    refetch: fetchData,
-    getUserRole,
-  };
+  return { milestones, isLoading, error, refetch: fetchMilestones };
 }
 
-// Timeline events hook
-export function useTimeline() {
+export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () => void) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<Hash | null>(null);
+
+  const lock = useCallback(
+    async (totalAmount: bigint) => {
+      if (!escrowAddress) return;
+
+      setIsLoading(true);
+      setError(null);
+      setTxHash(null);
+
+      try {
+        const wallet = createWallet();
+        const client = createClient();
+        if (!wallet) throw new Error("Walletが接続されていません");
+
+        const [account] = await wallet.getAddresses();
+
+        // First approve token
+        const hash1 = await wallet.writeContract({
+          address: config.tokenAddress,
+          abi: ERC20_ABI,
+          functionName: "approve",
+          args: [escrowAddress, totalAmount],
+          account,
+        });
+
+        await client.waitForTransactionReceipt({ hash: hash1 });
+
+        // Then lock
+        const hash2 = await wallet.writeContract({
+          address: escrowAddress,
+          abi: ESCROW_ABI,
+          functionName: "lock",
+          args: [],
+          account,
+        });
+
+        await client.waitForTransactionReceipt({ hash: hash2 });
+        setTxHash(hash2);
+        onSuccess?.();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "購入に失敗しました");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [escrowAddress, onSuccess]
+  );
+
+  const submit = useCallback(
+    async (index: number) => {
+      if (!escrowAddress) return;
+
+      setIsLoading(true);
+      setError(null);
+      setTxHash(null);
+
+      try {
+        const wallet = createWallet();
+        const client = createClient();
+        if (!wallet) throw new Error("Walletが接続されていません");
+
+        const [account] = await wallet.getAddresses();
+        const hash = await wallet.writeContract({
+          address: escrowAddress,
+          abi: ESCROW_ABI,
+          functionName: "submit",
+          args: [BigInt(index)],
+          account,
+        });
+
+        await client.waitForTransactionReceipt({ hash });
+        setTxHash(hash);
+        onSuccess?.();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "完了報告に失敗しました");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [escrowAddress, onSuccess]
+  );
+
+  return { lock, submit, isLoading, error, txHash };
+}
+
+export function useEscrowEvents(escrowAddress: Address | null) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchEvents = useCallback(async () => {
-    if (!config.contractAddress) return;
+    if (!escrowAddress) {
+      setEvents([]);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -245,45 +603,28 @@ export function useTimeline() {
     try {
       const client = createClient();
 
-      const [lockedLogs, completedLogs, cancelledLogs] = await Promise.all([
+      const [lockedLogs, completedLogs] = await Promise.all([
         client.getLogs({
-          address: config.contractAddress,
+          address: escrowAddress,
           event: {
             type: "event",
             name: "Locked",
             inputs: [
+              { name: "buyer", type: "address", indexed: true },
               { name: "amount", type: "uint256", indexed: false },
-              { name: "actor", type: "address", indexed: true },
             ],
           },
           fromBlock: 0n,
           toBlock: "latest",
         }),
         client.getLogs({
-          address: config.contractAddress,
+          address: escrowAddress,
           event: {
             type: "event",
             name: "Completed",
             inputs: [
               { name: "index", type: "uint256", indexed: true },
-              { name: "code", type: "string", indexed: false },
-              { name: "evidenceHash", type: "bytes32", indexed: false },
               { name: "amount", type: "uint256", indexed: false },
-              { name: "actor", type: "address", indexed: true },
-            ],
-          },
-          fromBlock: 0n,
-          toBlock: "latest",
-        }),
-        client.getLogs({
-          address: config.contractAddress,
-          event: {
-            type: "event",
-            name: "Cancelled",
-            inputs: [
-              { name: "reason", type: "string", indexed: false },
-              { name: "refundAmount", type: "uint256", indexed: false },
-              { name: "actor", type: "address", indexed: true },
             ],
           },
           fromBlock: 0n,
@@ -296,7 +637,7 @@ export function useTimeline() {
       for (const log of lockedLogs) {
         allEvents.push({
           type: "Locked",
-          actor: log.args.actor!,
+          buyer: log.args.buyer!,
           txHash: log.transactionHash!,
           blockNumber: log.blockNumber!,
           amount: log.args.amount,
@@ -306,24 +647,10 @@ export function useTimeline() {
       for (const log of completedLogs) {
         allEvents.push({
           type: "Completed",
-          actor: log.args.actor!,
           txHash: log.transactionHash!,
           blockNumber: log.blockNumber!,
           index: log.args.index,
-          code: log.args.code,
-          evidenceHash: log.args.evidenceHash,
           amount: log.args.amount,
-        });
-      }
-
-      for (const log of cancelledLogs) {
-        allEvents.push({
-          type: "Cancelled",
-          actor: log.args.actor!,
-          txHash: log.transactionHash!,
-          blockNumber: log.blockNumber!,
-          reason: log.args.reason,
-          refundAmount: log.args.refundAmount,
         });
       }
 
@@ -336,7 +663,7 @@ export function useTimeline() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [escrowAddress]);
 
   useEffect(() => {
     fetchEvents();
@@ -345,123 +672,105 @@ export function useTimeline() {
   return { events, isLoading, error, refetch: fetchEvents };
 }
 
-// Contract actions hook
-export function useContractActions(onSuccess?: () => void) {
+// ============ Token Hooks ============
+
+export function useTokenInfo() {
+  const [symbol, setSymbol] = useState<string>("");
+  const [decimals, setDecimals] = useState<number>(18);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<Hash | null>(null);
 
-  const lock = useCallback(async (totalAmount: bigint) => {
-    setIsLoading(true);
-    setError(null);
-    setTxHash(null);
+  useEffect(() => {
+    const fetchTokenInfo = async () => {
+      if (!config.tokenAddress) return;
 
-    try {
-      const wallet = createWallet();
-      const client = createClient();
-      if (!wallet) throw new Error("Walletが接続されていません");
+      setIsLoading(true);
+      try {
+        const client = createClient();
+        const [symbolResult, decimalsResult] = await Promise.all([
+          client.readContract({
+            address: config.tokenAddress,
+            abi: ERC20_ABI,
+            functionName: "symbol",
+          }),
+          client.readContract({
+            address: config.tokenAddress,
+            abi: ERC20_ABI,
+            functionName: "decimals",
+          }),
+        ]);
+        setSymbol(symbolResult as string);
+        setDecimals(decimalsResult as number);
+      } catch {
+        // Use defaults
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-      const [account] = await wallet.getAddresses();
+    fetchTokenInfo();
+  }, []);
 
-      // First approve token
-      const tokenAddress = config.tokenAddress;
-      const hash1 = await wallet.writeContract({
-        address: tokenAddress,
-        abi: ERC20_ABI,
-        functionName: "approve",
-        args: [config.contractAddress, totalAmount],
-        account,
-      });
-
-      await client.waitForTransactionReceipt({ hash: hash1 });
-
-      // Then lock
-      const hash2 = await wallet.writeContract({
-        address: config.contractAddress,
-        abi: ESCROW_ABI,
-        functionName: "lock",
-        args: [],
-        account,
-      });
-
-      await client.waitForTransactionReceipt({ hash: hash2 });
-      setTxHash(hash2);
-      onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Lock失敗");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onSuccess]);
-
-  const submit = useCallback(async (index: number, evidence: string) => {
-    setIsLoading(true);
-    setError(null);
-    setTxHash(null);
-
-    try {
-      const wallet = createWallet();
-      const client = createClient();
-      if (!wallet) throw new Error("Walletが接続されていません");
-
-      const [account] = await wallet.getAddresses();
-      const hash = await wallet.writeContract({
-        address: config.contractAddress,
-        abi: ESCROW_ABI,
-        functionName: "submit",
-        args: [BigInt(index), evidence],
-        account,
-      });
-
-      await client.waitForTransactionReceipt({ hash });
-      setTxHash(hash);
-      onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Submit失敗");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onSuccess]);
-
-  const cancel = useCallback(async (reason: string) => {
-    setIsLoading(true);
-    setError(null);
-    setTxHash(null);
-
-    try {
-      const wallet = createWallet();
-      const client = createClient();
-      if (!wallet) throw new Error("Walletが接続されていません");
-
-      const [account] = await wallet.getAddresses();
-
-      const hash = await wallet.writeContract({
-        address: config.contractAddress,
-        abi: ESCROW_ABI,
-        functionName: "cancel",
-        args: [reason],
-        account,
-      });
-
-      await client.waitForTransactionReceipt({ hash });
-      setTxHash(hash);
-      onSuccess?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Cancel失敗");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onSuccess]);
-
-  return { lock, submit, cancel, isLoading, error, txHash };
+  return { symbol, decimals, isLoading };
 }
 
-// Utility function
+export function useTokenBalance(address: Address | null) {
+  const [balance, setBalance] = useState<bigint>(0n);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchBalance = useCallback(async () => {
+    if (!address || !config.tokenAddress) {
+      setBalance(0n);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const client = createClient();
+      const result = await client.readContract({
+        address: config.tokenAddress,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [address],
+      });
+      setBalance(result as bigint);
+    } catch {
+      setBalance(0n);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [address]);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
+
+  return { balance, isLoading, refetch: fetchBalance };
+}
+
+// ============ Utility Functions ============
+
 export function formatAmount(amount: bigint, decimals: number, symbol: string): string {
   if (decimals <= 0) {
     return `${amount.toString()} ${symbol}`;
   }
   const divisor = 10n ** BigInt(decimals);
   const whole = amount / divisor;
-  return `${whole.toString()} ${symbol}`;
+  const fraction = amount % divisor;
+  if (fraction === 0n) {
+    return `${whole.toString()} ${symbol}`;
+  }
+  const fractionStr = fraction.toString().padStart(decimals, "0").slice(0, 2);
+  return `${whole}.${fractionStr} ${symbol}`;
+}
+
+export function getUserRole(userAddress: Address | null, info: EscrowInfo | null): UserRole {
+  if (!userAddress || !info) return "none";
+  const lower = userAddress.toLowerCase();
+  if (lower === info.buyer.toLowerCase()) return "buyer";
+  if (lower === info.producer.toLowerCase()) return "producer";
+  return "none";
+}
+
+export function shortenAddress(address: string): string {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }

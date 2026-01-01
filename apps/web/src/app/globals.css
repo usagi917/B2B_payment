@@ -726,29 +726,6 @@ select.input {
 .stagger > *:nth-child(6) { animation-delay: 375ms; }
 
 /* ========================================
-   THREE.JS CANVAS
-   ======================================== */
-.three-canvas-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.three-canvas-container canvas {
-  display: block;
-}
-
-/* Content above canvas */
-.content-layer {
-  position: relative;
-  z-index: 2;
-}
-
-/* ========================================
    SURFACE VARIANTS
    ======================================== */
 .surface {

@@ -1,33 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http, type Address } from "viem";
-import { baseSepolia } from "viem/chains";
-import { ESCROW_ABI, ERC20_ABI } from "@/lib/abi";
-import { SUPPORTED_CHAINS } from "@/lib/config";
-
-// NFT Contract ABI (minimal for escrowContracts lookup)
-const NFT_ABI = [
-  {
-    type: "function",
-    name: "escrowContracts",
-    inputs: [{ name: "tokenId", type: "uint256" }],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "view",
-  },
-] as const;
-
-type MilestoneState = 0 | 1; // PENDING, COMPLETED
-
-interface Milestone {
-  code: string;
-  bps: bigint;
-  state: MilestoneState;
-}
+import { polygonAmoy } from "viem/chains";
+import { FACTORY_ABI, ESCROW_ABI, ERC20_ABI } from "@/lib/abi";
+import { SUPPORTED_CHAINS, CATEGORY_LABELS } from "@/lib/config";
 
 const resolveChain = () => {
   const chainId = Number(
-    process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || baseSepolia.id
+    process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || polygonAmoy.id
   );
-  return SUPPORTED_CHAINS[chainId] ?? baseSepolia;
+  return SUPPORTED_CHAINS[chainId] ?? polygonAmoy;
 };
 
 const formatTokenAmount = (amount: bigint, decimals: number) => {
@@ -35,9 +16,6 @@ const formatTokenAmount = (amount: bigint, decimals: number) => {
   const divisor = 10n ** BigInt(decimals);
   return (amount / divisor).toString();
 };
-
-const calcProgressPercent = (released: bigint, total: bigint) =>
-  total > 0n ? Number((released * 100n) / total) : 0;
 
 export async function GET(
   request: NextRequest,
@@ -47,15 +25,14 @@ export async function GET(
     const { tokenId } = await params;
     const tokenIdNum = parseInt(tokenId);
 
-    if (isNaN(tokenIdNum) || tokenIdNum < 1) {
+    if (isNaN(tokenIdNum) || tokenIdNum < 0) {
       return NextResponse.json({ error: "Invalid tokenId" }, { status: 400 });
     }
 
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
-    const nftContractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS as Address;
-    const escrowAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as Address;
+    const factoryAddress = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as Address;
 
-    if (!rpcUrl || !escrowAddress) {
+    if (!rpcUrl || !factoryAddress) {
       return NextResponse.json({ error: "Missing configuration" }, { status: 500 });
     }
 
@@ -64,45 +41,62 @@ export async function GET(
       transport: http(rpcUrl),
     });
 
-    // For MVP: use the escrow address directly from env
-    // In production: lookup from NFT contract using tokenId
-    let targetEscrow = escrowAddress;
+    // Get escrow address from factory
+    const escrowAddress = await client.readContract({
+      address: factoryAddress,
+      abi: FACTORY_ABI,
+      functionName: "tokenIdToEscrow",
+      args: [BigInt(tokenIdNum)],
+    }) as Address;
 
-    if (nftContractAddress) {
-      try {
-        const escrowFromNft = await client.readContract({
-          address: nftContractAddress,
-          abi: NFT_ABI,
-          functionName: "escrowContracts",
-          args: [BigInt(tokenIdNum)],
-        });
-        if (escrowFromNft !== "0x0000000000000000000000000000000000000000") {
-          targetEscrow = escrowFromNft;
-        }
-      } catch {
-        // Fall back to env contract address
-      }
+    if (escrowAddress === "0x0000000000000000000000000000000000000000") {
+      return NextResponse.json({ error: "Token not found" }, { status: 404 });
     }
 
-    // Get contract summary
-    const summary = await client.readContract({
-      address: targetEscrow,
-      abi: ESCROW_ABI,
-      functionName: "getSummary",
-    });
+    // Get escrow info (split into core and meta)
+    const [core, meta, progress] = await Promise.all([
+      client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "getCore",
+      }),
+      client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "getMeta",
+      }),
+      client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "getProgress",
+      }),
+    ]) as [
+      {
+        factory: Address;
+        tokenAddress: Address;
+        producer: Address;
+        buyer: Address;
+        tokenId: bigint;
+        totalAmount: bigint;
+        releasedAmount: bigint;
+        locked: boolean;
+      },
+      {
+        category: string;
+        title: string;
+        description: string;
+        imageURI: string;
+        status: string;
+      },
+      [bigint, bigint]
+    ];
 
-    const [
-      tokenAddress,
-      ,
-      ,
-      ,
-      totalAmount,
-      lockedAmount,
-      releasedAmount,
-      ,
-      cancelled,
-      milestonesCount,
-    ] = summary;
+    const { tokenAddress, producer, buyer, totalAmount, releasedAmount, locked } = core;
+    const { category, title, description, imageURI, status } = meta;
+    const [completedCount, totalCount] = progress;
+    const progressPercent = totalCount > 0n
+      ? Number((completedCount * 100n) / totalCount)
+      : 0;
 
     // Get token info
     const [symbol, decimals] = await Promise.all([
@@ -116,61 +110,43 @@ export async function GET(
         abi: ERC20_ABI,
         functionName: "decimals",
       }),
-    ]);
+    ]) as [string, number];
 
-    // Get milestones
-    const milestones: Milestone[] = [];
-    for (let i = 0; i < Number(milestonesCount); i++) {
-      const m = await client.readContract({
-        address: targetEscrow,
-        abi: ESCROW_ABI,
-        functionName: "milestone",
-        args: [BigInt(i)],
-      });
-      milestones.push({
-        code: m[0],
-        bps: m[1],
-        state: m[2] as MilestoneState,
-      });
-    }
+    // Determine status label
+    const statusLabels: Record<string, string> = {
+      open: "Open",
+      active: "In Progress",
+      completed: "Completed",
+    };
+    const statusLabel = statusLabels[status] || status;
 
-    // Calculate stats
-    const completedCount = milestones.filter((m) => m.state === 1).length;
-    const pendingCount = milestones.filter((m) => m.state === 0).length;
-    const progressPercent = calcProgressPercent(releasedAmount, totalAmount);
-
-    // Determine status
-    let status = "Not Locked";
-    if (cancelled) {
-      status = "Cancelled";
-    } else if (lockedAmount > 0n) {
-      if (completedCount === milestones.length) {
-        status = "Completed";
-      } else if (completedCount > 0) {
-        status = "In Progress";
-      } else {
-        status = "Locked";
-      }
-    }
+    // Category label
+    const categoryLabel = CATEGORY_LABELS[category]?.en || category;
 
     // Build attributes
     const attributes = [
-      { trait_type: "Status", value: status },
+      { trait_type: "Category", value: categoryLabel },
+      { trait_type: "Status", value: statusLabel },
       { trait_type: "Progress", value: `${progressPercent}%` },
-      { trait_type: "Milestones Completed", value: completedCount },
-      { trait_type: "Milestones Pending", value: pendingCount },
+      { trait_type: "Milestones Completed", value: Number(completedCount) },
+      { trait_type: "Total Milestones", value: Number(totalCount) },
       { trait_type: "Total Amount", value: `${formatTokenAmount(totalAmount, decimals)} ${symbol}` },
       { trait_type: "Released Amount", value: `${formatTokenAmount(releasedAmount, decimals)} ${symbol}` },
       { trait_type: "Token", value: symbol },
+      { trait_type: "Producer", value: producer },
     ];
+
+    if (locked && buyer !== "0x0000000000000000000000000000000000000000") {
+      attributes.push({ trait_type: "Buyer", value: buyer });
+    }
 
     // Build metadata
     const baseUrl = request.nextUrl.origin;
     const metadata = {
-      name: `Wagyu Lot #${tokenId.padStart(3, "0")}`,
-      description: `Milestone-based escrow for Wagyu cattle fattening with auto-payment. This NFT dynamically reflects the current state of the escrow contract. Progress: ${progressPercent}% (${completedCount}/${milestones.length} milestones completed).`,
-      image: `${baseUrl}/api/nft/${tokenId}/image`,
-      external_url: baseUrl,
+      name: title || `Listing #${tokenId.padStart(3, "0")}`,
+      description: description || `Milestone-based escrow for ${categoryLabel}. Progress: ${progressPercent}% (${completedCount}/${totalCount} milestones completed).`,
+      image: imageURI || `${baseUrl}/api/nft/${tokenId}/image`,
+      external_url: `${baseUrl}/listing/${escrowAddress}`,
       attributes,
     };
 

@@ -61,11 +61,6 @@ const roleColors: Record<UserRole, { bg: string; color: string; border: string }
     color: 'var(--color-producer)',
     border: 'rgba(52, 211, 153, 0.3)',
   },
-  admin: {
-    bg: 'var(--color-admin-surface)',
-    color: 'var(--color-admin)',
-    border: 'rgba(167, 139, 250, 0.3)',
-  },
   none: {
     bg: 'var(--color-surface-variant)',
     color: 'var(--color-text-muted)',
@@ -94,7 +89,6 @@ export function ConnectWallet({
   const roleConfig: Record<UserRole, string> = {
     buyer: t("buyer"),
     producer: t("producer"),
-    admin: t("admin"),
     none: t("observer"),
   };
 

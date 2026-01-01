@@ -1,9 +1,9 @@
 export { Header } from "./Header";
 export { ConnectWallet } from "./ConnectWallet";
-export { ContractSummary } from "./ContractSummary";
-export { Actions } from "./Actions";
-export { MilestonesList } from "./MilestonesList";
-export { Timeline } from "./Timeline";
+// Legacy v1 components (removed - need update for v2 types)
+// ContractSummary, Actions, MilestonesList, Timeline - removed
 export { NFTCard } from "./NFTCard";
 export { HeroNFT } from "./HeroNFT";
-export { MarbleBackground, ProgressTorus } from "./three";
+// v2 components
+export { ListingCard } from "./ListingCard";
+export { CreateListingForm } from "./CreateListingForm";

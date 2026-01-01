@@ -1,104 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http, type Address } from "viem";
-import { baseSepolia } from "viem/chains";
-import { ESCROW_ABI, ERC20_ABI } from "@/lib/abi";
-import { SUPPORTED_CHAINS } from "@/lib/config";
-
-type MilestoneState = 0 | 1; // PENDING, COMPLETED
+import { polygonAmoy } from "viem/chains";
+import { FACTORY_ABI, ESCROW_ABI, ERC20_ABI } from "@/lib/abi";
+import { SUPPORTED_CHAINS, CATEGORY_LABELS } from "@/lib/config";
 
 interface Milestone {
-  code: string;
+  name: string;
   bps: bigint;
-  state: MilestoneState;
+  completed: boolean;
 }
-
-const NFT_ABI = [
-  {
-    type: "function",
-    name: "escrowContracts",
-    inputs: [{ name: "tokenId", type: "uint256" }],
-    outputs: [{ name: "", type: "address" }],
-    stateMutability: "view",
-  },
-] as const;
 
 const resolveChain = () => {
   const chainId = Number(
-    process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || baseSepolia.id
+    process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || polygonAmoy.id
   );
-  return SUPPORTED_CHAINS[chainId] ?? baseSepolia;
+  return SUPPORTED_CHAINS[chainId] ?? polygonAmoy;
 };
 
-// Constants
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const HTTP_STATUS = {
   BAD_REQUEST: 400,
+  NOT_FOUND: 404,
   INTERNAL_SERVER_ERROR: 500,
 } as const;
 
-// Utility functions
 const formatTokenAmount = (amount: bigint, decimals: number): string => {
   if (decimals <= 0) return amount.toString();
   const divisor = 10n ** BigInt(decimals);
   return (amount / divisor).toString();
 };
 
-const calcProgressPercent = (released: bigint, total: bigint): number =>
-  total > 0n ? Number((released * 100n) / total) : 0;
-
-const getStatus = (
-  cancelled: boolean,
-  lockedAmount: bigint,
-  completedCount: number,
-  totalMilestones: number
-): string => {
-  if (cancelled) return "Cancelled";
-  if (lockedAmount === 0n) return "Not Locked";
-  if (completedCount === totalMilestones) return "Completed";
-  if (completedCount > 0) return "In Progress";
-  return "Locked";
-};
-
 function generateSVG(
   tokenId: string,
+  title: string,
+  category: string,
   milestones: Milestone[],
   progressPercent: number,
   releasedAmount: string,
   totalAmount: string,
   symbol: string,
-  status: string,
-  cancelled: boolean
+  status: string
 ): string {
-  // Colors
-  const bgGradientStart = cancelled ? "#1a1a2e" : "#0f0f23";
-  const bgGradientEnd = cancelled ? "#16213e" : "#1a1a3e";
-  const accentColor = cancelled ? "#e74c3c" : "#f39c12";
+  const bgGradientStart = "#0f0f23";
+  const bgGradientEnd = "#1a1a3e";
+  const accentColor = "#f39c12";
   const successColor = "#27ae60";
   const pendingColor = "#3498db";
-  const progressStart = "#1d4ed8";
-  const progressEnd = "#60a5fa";
+  const progressStart = "#d4af37";
+  const progressEnd = "#f4d03f";
   const textColor = "#ecf0f1";
   const mutedColor = "#7f8c8d";
 
+  const categoryLabel = CATEGORY_LABELS[category]?.en || category;
+  const categoryEmoji = category === "wagyu" ? "🐂" : category === "sake" ? "🍶" : category === "craft" ? "🏺" : "📦";
+  const completedEmoji = status === "completed" ? "✨" : "";
+
   // Generate milestone indicators
+  const milestonesPerRow = 6;
   const milestoneIndicators = milestones
     .map((m, i) => {
-      const x = 40 + (i % 6) * 55;
-      const y = 280 + Math.floor(i / 6) * 70;
+      const x = 40 + (i % milestonesPerRow) * 55;
+      const y = 320 + Math.floor(i / milestonesPerRow) * 60;
 
-      let fillColor = pendingColor;
-      let icon = "○";
-      if (m.state === 1) {
-        // COMPLETED
-        fillColor = successColor;
-        icon = "✓";
-      }
+      const fillColor = m.completed ? successColor : pendingColor;
+      const icon = m.completed ? "✓" : "○";
+
+      // Truncate name if too long
+      const displayName = m.name.length > 4 ? m.name.slice(0, 4) : m.name;
 
       return `
         <g transform="translate(${x}, ${y})">
-          <rect x="0" y="0" width="50" height="50" rx="8" fill="${fillColor}20" stroke="${fillColor}" stroke-width="2"/>
-          <text x="25" y="22" font-size="14" fill="${fillColor}" text-anchor="middle" font-weight="bold">${m.code}</text>
-          <text x="25" y="40" font-size="12" fill="${textColor}" text-anchor="middle">${icon}</text>
+          <rect x="0" y="0" width="50" height="45" rx="8" fill="${fillColor}20" stroke="${fillColor}" stroke-width="2"/>
+          <text x="25" y="18" font-size="10" fill="${textColor}" text-anchor="middle">${displayName}</text>
+          <text x="25" y="36" font-size="14" fill="${fillColor}" text-anchor="middle">${icon}</text>
         </g>
       `;
     })
@@ -108,8 +81,12 @@ function generateSVG(
   const progressBarWidth = 320;
   const progressFill = (progressPercent / 100) * progressBarWidth;
 
+  // Milestone rows count
+  const milestoneRows = Math.ceil(milestones.length / milestonesPerRow);
+  const svgHeight = 380 + milestoneRows * 60;
+
   const svg = `
-<svg width="400" height="500" viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+<svg width="400" height="${svgHeight}" viewBox="0 0 400 ${svgHeight}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:${bgGradientStart}"/>
@@ -129,55 +106,57 @@ function generateSVG(
   </defs>
 
   <!-- Background -->
-  <rect width="400" height="500" fill="url(#bgGradient)"/>
+  <rect width="400" height="${svgHeight}" fill="url(#bgGradient)"/>
 
   <!-- Border -->
-  <rect x="10" y="10" width="380" height="480" rx="20" fill="none" stroke="${accentColor}40" stroke-width="2"/>
+  <rect x="10" y="10" width="380" height="${svgHeight - 20}" rx="20" fill="none" stroke="${accentColor}40" stroke-width="2"/>
 
-  <!-- Header -->
-  <text x="200" y="50" font-family="Arial, sans-serif" font-size="24" fill="${textColor}" text-anchor="middle" font-weight="bold" filter="url(#glow)">
-    WAGYU LOT #${tokenId.padStart(3, "0")}
+  <!-- Category Badge -->
+  <rect x="140" y="25" width="120" height="24" rx="12" fill="${accentColor}30"/>
+  <text x="200" y="42" font-family="Arial, sans-serif" font-size="11" fill="${accentColor}" text-anchor="middle" font-weight="bold">
+    ${categoryLabel.toUpperCase()}
   </text>
 
+  <!-- Title -->
+  <text x="200" y="80" font-family="Arial, sans-serif" font-size="20" fill="${textColor}" text-anchor="middle" font-weight="bold" filter="url(#glow)">
+    ${title.length > 25 ? title.slice(0, 25) + "..." : title}
+  </text>
+
+  <!-- Token ID -->
+  <text x="200" y="105" font-family="Arial, sans-serif" font-size="12" fill="${mutedColor}" text-anchor="middle">
+    Token #${tokenId.padStart(3, "0")}
+  </text>
+
+  <!-- Icon -->
+  <text x="200" y="165" font-size="50" text-anchor="middle">${categoryEmoji}${completedEmoji}</text>
+
   <!-- Status Badge -->
-  <rect x="100" y="65" width="200" height="28" rx="14" fill="${cancelled ? "#e74c3c" : status === "Completed" ? successColor : accentColor}30"/>
-  <text x="200" y="85" font-family="Arial, sans-serif" font-size="12" fill="${cancelled ? "#e74c3c" : status === "Completed" ? successColor : accentColor}" text-anchor="middle" font-weight="bold">
+  <rect x="120" y="185" width="160" height="28" rx="14" fill="${status === "completed" ? successColor : status === "active" ? accentColor : pendingColor}30"/>
+  <text x="200" y="204" font-family="Arial, sans-serif" font-size="12" fill="${status === "completed" ? successColor : status === "active" ? accentColor : pendingColor}" text-anchor="middle" font-weight="bold">
     ${status.toUpperCase()}
   </text>
 
-  <!-- Cow Icon -->
-  <text x="200" y="150" font-size="60" text-anchor="middle">${cancelled ? "💀" : progressPercent >= 100 ? "🥩" : "🐂"}</text>
-
   <!-- Progress Section -->
-  <text x="40" y="200" font-family="Arial, sans-serif" font-size="14" fill="${mutedColor}">Progress</text>
-  <text x="360" y="200" font-family="Arial, sans-serif" font-size="14" fill="${textColor}" text-anchor="end" font-weight="bold">${progressPercent}%</text>
+  <text x="40" y="245" font-family="Arial, sans-serif" font-size="14" fill="${mutedColor}">Progress</text>
+  <text x="360" y="245" font-family="Arial, sans-serif" font-size="14" fill="${textColor}" text-anchor="end" font-weight="bold">${progressPercent}%</text>
 
   <!-- Progress Bar Background -->
-  <rect x="40" y="210" width="${progressBarWidth}" height="16" rx="8" fill="${mutedColor}30"/>
+  <rect x="40" y="255" width="${progressBarWidth}" height="16" rx="8" fill="${mutedColor}30"/>
 
   <!-- Progress Bar Fill -->
-  <rect x="40" y="210" width="${progressFill}" height="16" rx="8" fill="url(#progressGradient)">
+  <rect x="40" y="255" width="${progressFill}" height="16" rx="8" fill="url(#progressGradient)">
     <animate attributeName="width" from="0" to="${progressFill}" dur="1s" fill="freeze"/>
   </rect>
 
   <!-- Amount Info -->
-  <text x="40" y="255" font-family="Arial, sans-serif" font-size="12" fill="${mutedColor}">Released: ${releasedAmount} / ${totalAmount} ${symbol}</text>
+  <text x="40" y="295" font-family="Arial, sans-serif" font-size="12" fill="${mutedColor}">Released: ${releasedAmount} / ${totalAmount} ${symbol}</text>
 
   <!-- Milestones Grid -->
   ${milestoneIndicators}
 
-  <!-- Legend -->
-  <g transform="translate(80, 450)">
-    <rect width="12" height="12" rx="2" fill="${successColor}"/>
-    <text x="18" y="10" font-family="Arial, sans-serif" font-size="10" fill="${mutedColor}">Completed</text>
-
-    <rect x="110" width="12" height="12" rx="2" fill="${pendingColor}"/>
-    <text x="128" y="10" font-family="Arial, sans-serif" font-size="10" fill="${mutedColor}">Pending</text>
-  </g>
-
   <!-- Footer -->
-  <text x="200" y="485" font-family="Arial, sans-serif" font-size="8" fill="${mutedColor}40" text-anchor="middle">
-    Dynamic NFT - Auto-payment on milestone completion
+  <text x="200" y="${svgHeight - 15}" font-family="Arial, sans-serif" font-size="8" fill="${mutedColor}40" text-anchor="middle">
+    Wagyu Milestone Escrow v2 - Dynamic NFT
   </text>
 </svg>
   `.trim();
@@ -193,15 +172,14 @@ export async function GET(
     const { tokenId } = await params;
     const tokenIdNum = parseInt(tokenId);
 
-    if (isNaN(tokenIdNum) || tokenIdNum < 1) {
+    if (isNaN(tokenIdNum) || tokenIdNum < 0) {
       return new NextResponse("Invalid tokenId", { status: HTTP_STATUS.BAD_REQUEST });
     }
 
     const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
-    const escrowAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as Address;
-    const nftContractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS as Address;
+    const factoryAddress = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as Address;
 
-    if (!rpcUrl || !escrowAddress) {
+    if (!rpcUrl || !factoryAddress) {
       return new NextResponse("Missing configuration", { status: HTTP_STATUS.INTERNAL_SERVER_ERROR });
     }
 
@@ -210,42 +188,64 @@ export async function GET(
       transport: http(rpcUrl),
     });
 
-    let targetEscrow = escrowAddress;
-    if (nftContractAddress) {
-      try {
-        const escrowFromNft = await client.readContract({
-          address: nftContractAddress,
-          abi: NFT_ABI,
-          functionName: "escrowContracts",
-          args: [BigInt(tokenIdNum)],
-        });
-        if (escrowFromNft !== ZERO_ADDRESS) {
-          targetEscrow = escrowFromNft;
-        }
-      } catch {
-        // Fall back to env contract address
-      }
+    // Get escrow address from factory
+    const escrowAddress = await client.readContract({
+      address: factoryAddress,
+      abi: FACTORY_ABI,
+      functionName: "tokenIdToEscrow",
+      args: [BigInt(tokenIdNum)],
+    }) as Address;
+
+    if (escrowAddress === "0x0000000000000000000000000000000000000000") {
+      return new NextResponse("Token not found", { status: HTTP_STATUS.NOT_FOUND });
     }
 
-    // Get contract summary
-    const summary = await client.readContract({
-      address: targetEscrow,
-      abi: ESCROW_ABI,
-      functionName: "getSummary",
-    });
+    // Get escrow info (split into core and meta)
+    const [core, meta, milestonesResult] = await Promise.all([
+      client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "getCore",
+      }),
+      client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "getMeta",
+      }),
+      client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "getMilestones",
+      }),
+    ]) as [
+      {
+        factory: Address;
+        tokenAddress: Address;
+        producer: Address;
+        buyer: Address;
+        tokenId: bigint;
+        totalAmount: bigint;
+        releasedAmount: bigint;
+        locked: boolean;
+      },
+      {
+        category: string;
+        title: string;
+        description: string;
+        imageURI: string;
+        status: string;
+      },
+      Array<{ name: string; bps: bigint; completed: boolean }>
+    ];
 
-    const [
-      tokenAddress,
-      ,
-      ,
-      ,
-      totalAmount,
-      lockedAmount,
-      releasedAmount,
-      ,
-      cancelled,
-      milestonesCount,
-    ] = summary;
+    const { tokenAddress, totalAmount, releasedAmount } = core;
+    const { category, title, status } = meta;
+
+    const milestones: Milestone[] = milestonesResult.map((m) => ({
+      name: m.name,
+      bps: m.bps,
+      completed: m.completed,
+    }));
 
     // Get token info
     const [symbol, decimals] = await Promise.all([
@@ -259,43 +259,24 @@ export async function GET(
         abi: ERC20_ABI,
         functionName: "decimals",
       }),
-    ]);
+    ]) as [string, number];
 
-    // Get milestones
-    const milestones: Milestone[] = [];
-    for (let i = 0; i < Number(milestonesCount); i++) {
-      const m = await client.readContract({
-        address: targetEscrow,
-        abi: ESCROW_ABI,
-        functionName: "milestone",
-        args: [BigInt(i)],
-      });
-      milestones.push({
-        code: m[0],
-        bps: m[1],
-        state: m[2] as MilestoneState,
-      });
-    }
-
-    // Calculate stats
-    const completedCount = milestones.filter((m) => m.state === 1).length;
-    const progressPercent = calcProgressPercent(releasedAmount, totalAmount);
-    const status = getStatus(
-      cancelled,
-      lockedAmount,
-      completedCount,
-      milestones.length
-    );
+    // Calculate progress
+    const completedCount = milestones.filter((m) => m.completed).length;
+    const progressPercent = milestones.length > 0
+      ? Math.round((completedCount / milestones.length) * 100)
+      : 0;
 
     const svg = generateSVG(
       tokenId,
+      title || `Listing #${tokenId}`,
+      category,
       milestones,
       progressPercent,
       formatTokenAmount(releasedAmount, decimals),
       formatTokenAmount(totalAmount, decimals),
       symbol,
-      status,
-      cancelled
+      status
     );
 
     return new NextResponse(svg, {
