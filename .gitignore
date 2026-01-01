@@ -40,6 +40,9 @@ out/
 *.swp
 *.swo
 
+# Git worktrees
+.worktrees/
+
 # Tests
 /coverage/
 
