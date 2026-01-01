@@ -120,7 +120,7 @@ style: |
 
 <p class="subtext">
   トラストレスなサプライチェーン決済<br>
-  <span style="color: var(--theme-primary);">Solidity 0.8.24 × Next.js 15</span>
+  <span style="color: var(--theme-primary);">Solidity 0.8.24 × Next.js 15 × Dynamic NFT</span>
 </p>
 
 ---
@@ -163,21 +163,21 @@ Image Prompt: 巨大な青い歯車が回ると、黄色のコインが自動的
 
 ---
 
-# 11 STEPS
+# MILESTONES
 
 <div class="visual-area">
   <div class="visual-icon">🪜</div>
-  <div class="visual-label">成長に連動したマイルストーン</div>
+  <div class="visual-label">カテゴリ別マイルストーン</div>
 </div>
 
 <p class="subtext">
-  導入(20%) → 肥育(30%) → 成熟(30%) → 完了(20%)<br>
-  牛の生物学的な成長ステージに合わせて<br>
+  <span class="accent">wagyu: 11段階</span> / sake: 5段階 / craft: 4段階<br>
+  カテゴリごとに最適化されたステップで<br>
   <span class="accent">細かく資金をアンロック</span>する。
 </p>
 
-<!-- 
-Image Prompt: 11段の階段を登っていく牛のシルエット。各段にコインが置かれている。横からの視点。フラットデザイン。
+<!--
+Image Prompt: 3つのレーン（牛・酒・工芸品）がそれぞれ異なる段数の階段を持つ図。フラットデザイン。
 -->
 
 ---
@@ -190,12 +190,12 @@ Image Prompt: 11段の階段を登っていく牛のシルエット。各段に�
 </div>
 
 <p class="subtext">
-  契約の状態（ステート）を<span class="accent">可視化</span>。<br>
-  写真や体重データが提出されるたび、<br>
-  NFTの絵柄がリアルタイムに進化する。
+  <span class="accent">ListingFactoryV3</span>がNFT（ERC721）をミント。<br>
+  メタデータAPI（<code>/api/nft/:tokenId</code>）で進捗を可視化。<br>
+  マイルストーン達成ごとにNFTがリアルタイムに進化。
 </p>
 
-<!-- 
+<!--
 Image Prompt: 3枚のフレームが並んでいる。左から右へ、子牛→若牛→立派な和牛へと絵柄が変化している様子。
 -->
 
@@ -224,36 +224,36 @@ Image Prompt: スピードメーターの針がMAX（黄色いゾーン）を振
 
 <div class="visual-area">
   <div class="visual-icon">🌏</div>
-  <div class="visual-label">MVPから業界標準へ</div>
+  <div class="visual-label">マルチチェーン対応</div>
 </div>
 
 <p class="subtext">
-  現在: 単一ロットMVP (完了)<br>
-  次: 複数ロット管理・ファクトリーコントラクト<br>
+  現在: <span class="accent">Sepolia / Base Sepolia / Base / Polygon Amoy</span><br>
+  次: Polygon PoS / Arbitrum / Optimism<br>
   <span class="accent">未来: 建設・製造業への水平展開</span>
 </p>
 
-<!-- 
-Image Prompt: 日本の地図から世界地図へ、青い線がネットワークのように広がっていく様子。
+<!--
+Image Prompt: 複数のブロックチェーンのロゴが繋がったネットワーク図。
 -->
 
 ---
 
-# BUILDERS
+# ARCHITECTURE
 
 <div class="visual-area">
-  <div class="visual-icon">🤝</div>
-  <div class="visual-label">WEB3 × AGRI</div>
+  <div class="visual-icon">🏗️</div>
+  <div class="visual-label">ListingFactoryV3 × MilestoneEscrowV3</div>
 </div>
 
 <p class="subtext">
-  Solidityエンジニア、和牛の専門家、UIデザイナー。<br>
-  異なる領域のプロフェッショナルが<br>
-  <span class="accent">「実世界の課題」</span>をコードで解決する。
+  出品ごとに<span class="accent">エスクロー契約とNFTが自動生成</span>。<br>
+  購入時にERC20をロック、NFTは購入者へ移転。<br>
+  DB不要 - Next.js + viem + MUIでオンチェーン直接読み込み。
 </p>
 
-<!-- 
-Image Prompt: ラップトップPCとカウボーイハットが握手をしているようなアイコン的な構成。
+<!--
+Image Prompt: ファクトリーから複数のエスクローコントラクトが生成される図。各エスクローにNFTが紐づく。
 -->
 
 ---
