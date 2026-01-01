@@ -22,7 +22,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import LockIcon from "@mui/icons-material/Lock";
 import SendIcon from "@mui/icons-material/Send";
-import { Header } from "@/components";
+import { Header, HeroNFT } from "@/components";
 import {
   useWallet,
   useEscrowInfo,
@@ -166,6 +166,30 @@ export default function ListingDetailPage() {
                 >
                   {/* Left: Info */}
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {/* Dynamic NFT */}
+                    <Card
+                      sx={{
+                        background: "var(--glass-bg)",
+                        backdropFilter: "blur(20px)",
+                        border: "1px solid var(--glass-border)",
+                        borderRadius: 3,
+                      }}
+                    >
+                      <CardContent sx={{ p: 3 }}>
+                        <Typography
+                          variant="h6"
+                          sx={{ fontWeight: 600, color: "var(--color-text)", mb: 2 }}
+                        >
+                          {locale === "ja" ? "ダイナミックNFT" : "Dynamic NFT"}
+                        </Typography>
+                        <Box sx={{ display: "flex", justifyContent: "center" }}>
+                          <div className="hero-nft-shell">
+                            <HeroNFT tokenId={Number(info.tokenId)} />
+                          </div>
+                        </Box>
+                      </CardContent>
+                    </Card>
+
                     {/* Main Card */}
                     <Card
                       sx={{
