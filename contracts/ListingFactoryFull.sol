@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract MilestoneEscrowV2 {
+contract MilestoneEscrowV3 is ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     struct Milestone {
         uint16 bps;
         bool completed;
@@ -29,9 +35,16 @@ contract MilestoneEscrowV2 {
 
     error Unauthorized();
     error InvalidState();
-    error Failed();
+    error InvalidCategory();
+    error InvalidAmount();
+    error InvalidToken();
+    error SelfPurchase();
 
     constructor(address f, address t, address p, uint256 tid, uint8 cat, string memory _title, string memory _desc, uint256 amt, string memory img) {
+        if (cat > 2) revert InvalidCategory();
+        if (f == address(0) || t == address(0)) revert InvalidToken();
+        if (amt == 0) revert InvalidAmount();
+
         factory = f;
         tokenAddress = t;
         producer = p;
@@ -48,29 +61,31 @@ contract MilestoneEscrowV2 {
 
         if (cat == 0) for(uint i; i < 11; i++) milestones.push(Milestone(w[i], false));
         else if (cat == 1) for(uint i; i < 5; i++) milestones.push(Milestone(s[i], false));
-        else if (cat == 2) for(uint i; i < 4; i++) milestones.push(Milestone(c[i], false));
-        else milestones.push(Milestone(10000, false));
+        else for(uint i; i < 4; i++) milestones.push(Milestone(c[i], false));
     }
 
-    function lock() external {
+    function lock() external nonReentrant {
         if (locked) revert InvalidState();
-        (bool ok,) = tokenAddress.call(abi.encodeWithSignature("transferFrom(address,address,uint256)", msg.sender, address(this), totalAmount));
-        if (!ok) revert Failed();
+        if (msg.sender == producer) revert SelfPurchase();
         buyer = msg.sender;
         locked = true;
-        (ok,) = factory.call(abi.encodeWithSignature("transferFrom(address,address,uint256)", address(this), msg.sender, tokenId));
-        if (!ok) revert Failed();
+        IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), totalAmount);
+        IERC721(factory).safeTransferFrom(address(this), msg.sender, tokenId);
         emit Locked(msg.sender, totalAmount);
     }
 
-    function submit(uint256 i) external {
+    function submit(uint256 i) external nonReentrant {
         if (msg.sender != producer) revert Unauthorized();
         if (!locked || i >= milestones.length || milestones[i].completed) revert InvalidState();
         milestones[i].completed = true;
-        uint256 amt = (totalAmount * milestones[i].bps) / 10000;
+        uint256 amt;
+        if (i == milestones.length - 1) {
+            amt = totalAmount - releasedAmount;
+        } else {
+            amt = (totalAmount * milestones[i].bps) / 10000;
+        }
         releasedAmount += amt;
-        (bool ok,) = tokenAddress.call(abi.encodeWithSignature("transfer(address,uint256)", producer, amt));
-        if (!ok) revert Failed();
+        IERC20(tokenAddress).safeTransfer(producer, amt);
         emit Completed(i, amt);
     }
 
@@ -108,7 +123,7 @@ contract MilestoneEscrowV2 {
     }
 }
 
-contract ListingFactory is ERC721 {
+contract ListingFactoryV3 is ERC721 {
     address public immutable tokenAddress;
     address[] public listings;
     mapping(uint256 => address) public tokenIdToEscrow;
@@ -116,24 +131,29 @@ contract ListingFactory is ERC721 {
     string public baseURI;
 
     event ListingCreated(uint256 indexed tokenId, address indexed escrow, address indexed producer, uint8 categoryType, uint256 totalAmount);
+    error InvalidCategory();
+    error InvalidToken();
+    error InvalidAmount();
 
     constructor(address t, string memory uri) ERC721("MilestoneNFT", "MSNFT") {
+        if (t == address(0)) revert InvalidToken();
         tokenAddress = t;
         baseURI = uri;
     }
 
     function createListing(uint8 cat, string calldata _title, string calldata desc, uint256 amt, string calldata img) external returns (address escrow, uint256 tid) {
+        if (cat > 2) revert InvalidCategory();
+        if (amt == 0) revert InvalidAmount();
         tid = _nextTokenId++;
-        escrow = address(new MilestoneEscrowV2(address(this), tokenAddress, msg.sender, tid, cat, _title, desc, amt, img));
+        escrow = address(new MilestoneEscrowV3(address(this), tokenAddress, msg.sender, tid, cat, _title, desc, amt, img));
         listings.push(escrow);
         tokenIdToEscrow[tid] = escrow;
-        _mint(escrow, tid);
+        _safeMint(escrow, tid);
         emit ListingCreated(tid, escrow, msg.sender, cat, amt);
     }
 
     function getListings() external view returns (address[] memory) { return listings; }
     function getListingCount() external view returns (uint256) { return listings.length; }
-    function setBaseURI(string memory uri) external { baseURI = uri; }
 
     function tokenURI(uint256 tid) public view override returns (string memory) {
         _requireOwned(tid);

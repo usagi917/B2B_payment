@@ -71,28 +71,13 @@ export async function GET(
         functionName: "getProgress",
       }),
     ]) as [
-      {
-        factory: Address;
-        tokenAddress: Address;
-        producer: Address;
-        buyer: Address;
-        tokenId: bigint;
-        totalAmount: bigint;
-        releasedAmount: bigint;
-        locked: boolean;
-      },
-      {
-        category: string;
-        title: string;
-        description: string;
-        imageURI: string;
-        status: string;
-      },
+      [Address, Address, Address, Address, bigint, bigint, bigint, boolean],
+      [string, string, string, string, string],
       [bigint, bigint]
     ];
 
-    const { tokenAddress, producer, buyer, totalAmount, releasedAmount, locked } = core;
-    const { category, title, description, imageURI, status } = meta;
+    const [, tokenAddress, producer, buyer, , totalAmount, releasedAmount, locked] = core;
+    const [category, title, description, imageURI, status] = meta;
     const [completedCount, totalCount] = progress;
     const progressPercent = totalCount > 0n
       ? Number((completedCount * 100n) / totalCount)

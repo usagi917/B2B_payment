@@ -178,39 +178,27 @@ export function useListingSummaries() {
                 functionName: "getProgress",
               }),
             ]) as [
-              {
-                factory: Address;
-                tokenAddress: Address;
-                producer: Address;
-                buyer: Address;
-                tokenId: bigint;
-                totalAmount: bigint;
-                releasedAmount: bigint;
-                locked: boolean;
-              },
-              {
-                category: string;
-                title: string;
-                description: string;
-                imageURI: string;
-                status: string;
-              },
+              [Address, Address, Address, Address, bigint, bigint, bigint, boolean],
+              [string, string, string, string, string],
               [bigint, bigint]
             ];
 
+            const [, , producer, buyer, tokenId, totalAmount, releasedAmount, locked] = core;
+            const [category, title, description, imageURI, status] = meta;
+
             return {
               escrowAddress,
-              tokenId: core.tokenId,
-              producer: core.producer,
-              buyer: core.buyer,
-              totalAmount: core.totalAmount,
-              releasedAmount: core.releasedAmount,
-              locked: core.locked,
-              category: meta.category,
-              title: meta.title,
-              description: meta.description,
-              imageURI: meta.imageURI,
-              status: meta.status as "open" | "active" | "completed",
+              tokenId,
+              producer,
+              buyer,
+              totalAmount,
+              releasedAmount,
+              locked,
+              category,
+              title,
+              description,
+              imageURI,
+              status: status as "open" | "active" | "completed",
               progress: {
                 completed: Number(progress[0]),
                 total: Number(progress[1]),
@@ -274,7 +262,7 @@ export function getMilestoneName(categoryType: number, code: number): string {
   return names[code] || `Step ${code + 1}`;
 }
 
-export function useCreateListing(onSuccess?: (escrow: Address, tokenId: bigint) => void) {
+export function useCreateListing(onSuccess?: () => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<Hash | null>(null);
@@ -309,48 +297,10 @@ export function useCreateListing(onSuccess?: (escrow: Address, tokenId: bigint) 
         const receipt = await client.waitForTransactionReceipt({ hash });
         setTxHash(hash);
 
-        // Parse ListingCreated event to get escrow address and tokenId
-        const listingCreatedEvent = receipt.logs.find((log) => {
-          try {
-            return log.topics[0] === "0x" + "ListingCreated".padEnd(64, "0");
-          } catch {
-            return false;
-          }
-        });
-
-        if (listingCreatedEvent) {
-          // Get from return values by reading the contract
-          const listingCount = await client.readContract({
-            address: config.factoryAddress,
-            abi: FACTORY_ABI,
-            functionName: "getListingCount",
-          });
-
-          const escrow = await client.readContract({
-            address: config.factoryAddress,
-            abi: FACTORY_ABI,
-            functionName: "listings",
-            args: [listingCount - 1n],
-          });
-
-          onSuccess?.(escrow as Address, listingCount - 1n);
-        } else {
-          // Fallback: get latest listing
-          const listingCount = await client.readContract({
-            address: config.factoryAddress,
-            abi: FACTORY_ABI,
-            functionName: "getListingCount",
-          });
-
-          const escrow = await client.readContract({
-            address: config.factoryAddress,
-            abi: FACTORY_ABI,
-            functionName: "listings",
-            args: [listingCount - 1n],
-          });
-
-          onSuccess?.(escrow as Address, listingCount - 1n);
+        if (receipt.status === "reverted") {
+          throw new Error("出品トランザクションが失敗しました");
         }
+        onSuccess?.();
       } catch (err) {
         setError(err instanceof Error ? err.message : "出品に失敗しました");
       } finally {
@@ -393,39 +343,36 @@ export function useEscrowInfo(escrowAddress: Address | null) {
           functionName: "getMeta",
         }),
       ]) as [
-        {
-          factory: Address;
-          tokenAddress: Address;
-          producer: Address;
-          buyer: Address;
-          tokenId: bigint;
-          totalAmount: bigint;
-          releasedAmount: bigint;
-          locked: boolean;
-        },
-        {
-          category: string;
-          title: string;
-          description: string;
-          imageURI: string;
-          status: string;
-        }
+        [Address, Address, Address, Address, bigint, bigint, bigint, boolean],
+        [string, string, string, string, string]
       ];
 
+      const [
+        factory,
+        tokenAddress,
+        producer,
+        buyer,
+        tokenId,
+        totalAmount,
+        releasedAmount,
+        locked,
+      ] = core;
+      const [category, title, description, imageURI, status] = meta;
+
       setInfo({
-        factory: core.factory,
-        tokenAddress: core.tokenAddress,
-        producer: core.producer,
-        buyer: core.buyer,
-        tokenId: core.tokenId,
-        totalAmount: core.totalAmount,
-        releasedAmount: core.releasedAmount,
-        locked: core.locked,
-        category: meta.category,
-        title: meta.title,
-        description: meta.description,
-        imageURI: meta.imageURI,
-        status: meta.status as "open" | "active" | "completed",
+        factory,
+        tokenAddress,
+        producer,
+        buyer,
+        tokenId,
+        totalAmount,
+        releasedAmount,
+        locked,
+        category,
+        title,
+        description,
+        imageURI,
+        status: status as "open" | "active" | "completed",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch escrow info");
@@ -474,11 +421,11 @@ export function useMilestones(escrowAddress: Address | null, categoryType?: numb
         functionName: "getMilestones",
       });
 
-      const milestoneData = result as Array<{ bps: bigint; completed: boolean }>;
+      const milestoneData = result as Array<{ bps: bigint | number; completed: boolean }>;
       setMilestones(
         milestoneData.map((m, index) => ({
           code: index,
-          bps: m.bps,
+          bps: typeof m.bps === "bigint" ? m.bps : BigInt(m.bps),
           completed: m.completed,
           name: getMilestoneName(catType!, index),
         }))

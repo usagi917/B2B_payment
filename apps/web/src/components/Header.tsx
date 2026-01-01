@@ -90,12 +90,19 @@ export function Header({ onLocaleChange }: HeaderProps) {
               onChange={(_, newLocale) => newLocale && onLocaleChange(newLocale)}
               size="small"
               sx={{
-                background: 'var(--color-surface-variant)',
+                background: 'transparent',
                 borderRadius: 2,
-                border: '1px solid var(--color-border)',
-                '& .MuiToggleButton-root': {
-                  color: 'var(--color-text-muted)',
+                border: 'none',
+                gap: 0.5,
+                '& .MuiToggleButtonGroup-grouped': {
+                  margin: 0,
                   border: 'none',
+                },
+                '& .MuiToggleButton-root': {
+                  color: 'var(--color-text)',
+                  border: 'none',
+                  background: 'var(--color-info)',
+                  boxShadow: 'none',
                   px: 2,
                   py: 0.75,
                   fontSize: '0.75rem',
@@ -103,15 +110,14 @@ export function Header({ onLocaleChange }: HeaderProps) {
                   letterSpacing: '0.05em',
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    background: 'var(--color-surface)',
-                    color: 'var(--color-text)',
+                    background: 'var(--color-progress-dark)',
                   },
                   '&.Mui-selected': {
-                    background: 'var(--wagyu-gold)',
-                    color: 'var(--wagyu-charcoal)',
-                    boxShadow: 'var(--shadow-sm)',
+                    background: 'var(--color-progress-dark)',
+                    color: 'var(--color-text)',
+                    boxShadow: 'none',
                     '&:hover': {
-                      background: 'var(--wagyu-gold-light)',
+                      background: 'var(--color-progress-dark)',
                     },
                   },
                 },

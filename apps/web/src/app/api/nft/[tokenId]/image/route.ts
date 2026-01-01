@@ -218,31 +218,16 @@ export async function GET(
         functionName: "getMilestones",
       }),
     ]) as [
-      {
-        factory: Address;
-        tokenAddress: Address;
-        producer: Address;
-        buyer: Address;
-        tokenId: bigint;
-        totalAmount: bigint;
-        releasedAmount: bigint;
-        locked: boolean;
-      },
-      {
-        category: string;
-        title: string;
-        description: string;
-        imageURI: string;
-        status: string;
-      },
-      Array<{ name: string; bps: bigint; completed: boolean }>
+      [Address, Address, Address, Address, bigint, bigint, bigint, boolean],
+      [string, string, string, string, string],
+      Array<{ bps: bigint; completed: boolean }>
     ];
 
-    const { tokenAddress, totalAmount, releasedAmount } = core;
-    const { category, title, status } = meta;
+    const [, tokenAddress, , , , totalAmount, releasedAmount] = core;
+    const [category, title, , , status] = meta;
 
-    const milestones: Milestone[] = milestonesResult.map((m) => ({
-      name: m.name,
+    const milestones: Milestone[] = milestonesResult.map((m, index) => ({
+      name: `Step ${index + 1}`,
       bps: m.bps,
       completed: m.completed,
     }));

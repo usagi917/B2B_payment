@@ -510,9 +510,13 @@ export default function ListingDetailPage() {
                             onClick={wallet.connect}
                             disabled={wallet.isConnecting}
                             sx={{
-                              background: "linear-gradient(135deg, var(--wagyu-gold), var(--wagyu-gold-light))",
-                              color: "#000",
+                              background: "var(--color-info)",
+                              color: "var(--color-text)",
                               fontWeight: 600,
+                              boxShadow: "none",
+                              "&:hover": {
+                                background: "var(--color-progress-dark)",
+                              },
                             }}
                           >
                             {wallet.isConnecting

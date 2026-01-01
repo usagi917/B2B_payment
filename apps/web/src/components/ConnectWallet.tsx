@@ -301,13 +301,12 @@ export function ConnectWallet({
                   variant="contained"
                   sx={{
                     py: 1.5,
-                    background: 'linear-gradient(135deg, var(--color-info) 0%, var(--color-buyer) 100%)',
+                    background: 'var(--color-info)',
                     color: 'var(--color-text)',
                     fontWeight: 600,
-                    boxShadow: '0 4px 24px rgba(59, 130, 246, 0.35)',
+                    boxShadow: 'none',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, var(--color-buyer) 0%, var(--color-info) 100%)',
-                      boxShadow: '0 0 40px rgba(59, 130, 246, 0.45)',
+                      background: 'var(--color-progress-dark)',
                     },
                     '&:disabled': {
                       background: 'var(--color-surface-variant)',

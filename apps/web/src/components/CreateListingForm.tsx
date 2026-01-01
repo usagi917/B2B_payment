@@ -20,10 +20,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 import { useCreateListing, useTokenInfo, categoryToType } from "@/lib/hooks";
 import { getTxUrl } from "@/lib/config";
-import type { Address } from "viem";
-
 interface CreateListingFormProps {
-  onSuccess?: (escrow: Address, tokenId: bigint) => void;
+  onSuccess?: () => void;
 }
 
 const CATEGORIES = [
@@ -43,13 +41,13 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
   const [amount, setAmount] = useState("");
   const [imageURI, setImageURI] = useState("");
 
-  const handleSuccess = (escrow: Address, tokenId: bigint) => {
+  const handleSuccess = () => {
     setIsOpen(false);
     setTitle("");
     setDescription("");
     setAmount("");
     setImageURI("");
-    onSuccess?.(escrow, tokenId);
+    onSuccess?.();
   };
 
   const { createListing, isLoading, error, txHash } = useCreateListing(handleSuccess);
@@ -93,14 +91,14 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
               startIcon={<AddIcon />}
               onClick={() => setIsOpen(true)}
               sx={{
-                background: "linear-gradient(135deg, var(--wagyu-gold), var(--wagyu-gold-light))",
-                color: "#000",
+                background: "var(--color-info)",
+                color: "var(--color-text)",
                 fontWeight: 600,
                 px: 3,
                 py: 1.5,
                 borderRadius: 2,
                 "&:hover": {
-                  background: "linear-gradient(135deg, var(--wagyu-gold-light), var(--wagyu-gold))",
+                  background: "var(--color-progress-dark)",
                 },
               }}
             >
