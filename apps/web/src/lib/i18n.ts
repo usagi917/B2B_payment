@@ -11,7 +11,7 @@ export const translations = {
     appSubtitle: "B2B Payment Infrastructure",
 
     // Hero
-    heroEyebrow: "RITUAL OF TRUST",
+    heroEyebrow: "Proof of Trust",
     heroTitle: "刻む。証す。解放する。",
 
 
@@ -116,7 +116,7 @@ export const translations = {
     appSubtitle: "B2B Payment Infrastructure",
 
     // Hero
-    heroEyebrow: "RITUAL OF TRUST",
+    heroEyebrow: "Proof of Trust",
     heroTitle: "Record. Prove. Release.",
     heroSubtitle: "Bind time and agreement into a single ledger. Transparent evidence guides the release of value, quietly and precisely.",
     heroPillTrust: "Trust",
