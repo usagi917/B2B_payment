@@ -50,9 +50,9 @@ pnpm install
 1. ウォレットを接続し、対象ネットワークへ切り替え
 2. Buyerが「Lock Funds」を実行（ERC20 approve → lock の2トランザクション）
 3. Producerがマイルストーンを選択し、証跡テキストを入力してSubmit（自動支払い）
-4. Adminは必要に応じてCancelで未解放分を返金
+4. BuyerまたはAdminが必要に応じてCancelで未解放分を返金
 
-※ `submit` は `lock` 完了後のみ実行できます。`cancel` はAdminがいつでも実行できます（キャンセル後は進行不可）。
+※ `submit` は `lock` 完了後のみ実行できます。`cancel` はBuyerまたはAdminがいつでも実行できます（キャンセル後は進行不可）。
 
 ### Dynamic NFT API（任意）
 

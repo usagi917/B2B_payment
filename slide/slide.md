@@ -1,169 +1,273 @@
 ---
 marp: true
-title: Wagyu Milestone Escrow MVP
-description: Hackathon Pitch Deck
+theme: gaia
+size: 16:9
 paginate: true
-theme: default
----
+backgroundColor: #121212
+color: #e0e0e0
+style: |
+  /* --- Global Theme & Fonts --- */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&family=JetBrains+Mono:wght@400;700&display=swap');
+  
+  :root {
+    --theme-primary: #FFD600; /* Yellow (Sub) */
+    --theme-secondary: #2979FF; /* Blue (Main) */
+    --bg-dark: #121212;
+    --bg-card: #1E1E1E;
+    --border-color: #333333;
+  }
 
-<!-- _class: lead -->
+  section {
+    font-family: 'Inter', sans-serif;
+    font-size: 30px;
+    padding: 40px;
+    background-color: var(--bg-dark);
+    background-image: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
 
-# Wagyu Milestone Escrow MVP
+  /* --- Typography --- */
+  h1 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 120px; /* Massive Keyword */
+    line-height: 1.1;
+    color: var(--theme-secondary);
+    margin: 0;
+    padding: 0;
+    text-transform: uppercase;
+    letter-spacing: -4px;
+    border: none;
+  }
+  
+  h2 {
+    color: #fff;
+    font-size: 1.5em;
+    font-weight: 400;
+    margin-top: 20px;
+    margin-bottom: 40px;
+    border: none;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
 
-### 工程（エビデンス）が支払いを確定させる  
-### B2B向けマイルストーン・エスクロー
+  p.subtext {
+    font-size: 0.9em;
+    color: #888;
+    max-width: 800px;
+    margin-top: 30px;
+    line-height: 1.6;
+  }
 
-- **1ロット = 1スマートコントラクト**
-- **11マイルストーン / 自動資金解放**
-- **信頼を「人」から「オンチェーン工程ログ」へ**
+  /* --- Visuals --- */
+  .visual-area {
+    width: 60%;
+    height: 350px;
+    margin: 20px auto;
+    position: relative;
+    border: 4px solid var(--theme-primary); /* Yellow Border */
+    border-radius: 0; /* Sharp corners for flat look */
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
 
-**Tech Stack**
-Solidity 0.8.24 / Next.js 15 / ERC20 / Dynamic NFT
+  .visual-icon {
+    font-size: 6em;
+    margin-bottom: 20px;
+  }
+  
+  .visual-label {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--theme-primary);
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 1.2em;
+  }
 
-_Visual: 和牛 × ブロックチェーンのサイバーパンクヒーロー_
+  .img-prompt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: #444;
+    margin-top: 10px;
+    max-width: 60%;
+    text-align: center;
+  }
 
----
-
-# Problem
-
-## 前払いが成立しない一次産業の構造問題
-
-- **生産者**
-  - 肥育期間は約2年
-  - 資金は先出し、回収は出荷後のみ
-- **買い手**
-  - 前払いは不履行・事故リスクが高い
-- **共通課題**
-  - 工程確認が属人化
-  - 電話・メール確認コスト
-  - 支払い判断が曖昧
-
-_Visual:「資金は止まる／工程は進む」非同期構造_
-
----
-
-# Solution
-
-## 工程駆動型オートエスクロー
-
-- **11の工程マイルストーン**
-  - 肥育プロセスをあらかじめ定義
-  - 各工程に固定の解放率を設定
-- **Submit = Pay**
-  - 生産者が工程証跡を提出
-  - 同時にコントラクトが自動送金
-- **改ざん不可の証跡**
-  - 証跡はハッシュ化してオンチェーン保存
-- **Dynamic NFT**
-  - 進捗状態をNFT画像として可視化
-
-_Visual: コントラクト主導の自動送金フロー_
-
----
-
-# 11 Milestones
-
-## 和牛肥育に特化した段階解放モデル
-
-| フェーズ | 工程コード | 内容 | 解放率 |
-|---|---|---|---|
-| 導入 | E1 | 契約・ロット作成 | 10% |
-| 導入 | E2 | 検疫・牛導入 | 10% |
-| 肥育 | E3_01 | 月次肥育記録 | 5% |
-| 肥育 | E3_02 | 月次肥育記録 | 5% |
-| 肥育 | E3_03 | 月次肥育記録 | 5% |
-| 肥育 | E3_04 | 月次肥育記録 | 5% |
-| 肥育 | E3_05 | 月次肥育記録 | 5% |
-| 肥育 | E3_06 | 月次肥育記録 | 5% |
-| 出荷 | E4 | 出荷準備 | 10% |
-| 出荷 | E5 | 出荷完了 | 20% |
-| 完了 | E6 | 受領・検収 | 20% |
-
-**Total: 100%**
-
----
-
-# Product Flow
-
-## 1ロット = 1スマコンのシンプル操作
-
-1. **Lock**
-   - Buyerが総額（ERC20）をコントラクトにロック
-2. **Submit**
-   - Producerが工程証跡を送信
-   - 即座に該当分が自動送金
-3. **Visualize**
-   - Dynamic NFTが進捗をリアルタイム反映
-4. **Cancel / Resolve**
-   - 事故時はAdminが未解放分を返金
-
-_Visual: 4ステップUIイメージ_
-
----
-
-# Value
-
-## 「エビデンス = 支払い」の取引DX
-
-- **キャッシュフロー改善**
-  - 工程完了ごとに即入金
-- **説明責任の自動化**
-  - 証跡 = 監査ログ
-- **サーバーレス運用**
-  - DB不要 / Vercel + RPCのみ
-- **高い透明性**
-  - NFTを見るだけで進捗が分かる
-
-_Visual: Before（手動確認） / After（自動解放）_
+  /* --- Specific Adjustments --- */
+  .accent { color: var(--theme-primary); }
+  
+  /* Title Slide Specifics */
+  .title-h1 { font-size: 80px; color: #fff; letter-spacing: -2px; }
+  .title-h2 { color: var(--theme-secondary); font-weight: 900; font-size: 40px; }
 
 ---
 
-# Execution
+<!-- _class: title-slide -->
 
-## MVPからスケールまで
+<h1 class="title-h1">WAGYU ESCROW</h1>
+<h2 class="title-h2">PROTOCOL</h2>
 
-- **Now (Hackathon MVP)**
-  - Solidity 0.8.24
-  - Next.js 15
-  - viem / wagmi
-- **Next**
-  - Factoryコントラクト
-  - 複数牛管理
-  - KYC / 証跡の分散ストレージ
-- **Future**
-  - 建設・製造・クリエイティブ制作など
-  - 工程型B2B取引への水平展開
+<div class="visual-area" style="height: 250px; width: 250px; border-radius: 50%;">
+  <div class="visual-icon">🐂</div>
+</div>
 
-_Visual: 3ステップロードマップ_
+<p class="subtext">
+  トラストレスなサプライチェーン決済<br>
+  <span style="color: var(--theme-primary);">Solidity 0.8.24 × Next.js 15</span>
+</p>
 
 ---
 
-# Team
+# BLACK BOX
 
-## ドメイン × 技術の最短距離
+<div class="visual-area">
+  <div class="visual-icon">📦</div>
+  <div class="visual-label">見えない・信用できない</div>
+</div>
 
-- **Web3 Engineer**
-  - Solidity / セキュリティ / dApp
-- **Domain Expert**
-  - 畜産・一次産業B2B商流
-- **UI / UX Designer**
-  - 複雑な状態をNFTで可視化
+<p class="subtext">
+  <strong>課題:</strong> 生産者は2年間売上ゼロ。<br>
+  購入者は牛が本当に育っているか確認できない。<br>
+  <span class="accent">信頼とキャッシュフローの深い溝。</span>
+</p>
 
-_Visual: スキルアイコン_
+<!-- 
+Image Prompt: 真っ黒な箱（ブラックボックス）の前に立つ、困惑した農家と疑い深いビジネスマン。フラットなイラスト。背景はダークグレー。
+-->
 
 ---
 
-# Close
+# AUTOMATION
 
-## 信頼をプログラムし、一次産業を前に進める
+<div class="visual-area">
+  <div class="visual-icon">⚙️ ➡️ 💰</div>
+  <div class="visual-label">プロセス ＝ 支払い</div>
+</div>
 
-- Demo:  
-  `https://wagyu-escrow-mvp.vercel.app`
-- GitHub:  
-  `https://github.com/your-org/wagyu-escrow`
+<p class="subtext">
+  <strong>解決策:</strong> スマートコントラクトによる自動エスクロー。<br>
+  資金はロックされ、条件達成で<span class="accent">即座に</span>解き放たれる。<br>
+  人の介在しない、純粋な契約執行。
+</p>
 
-**Action**
-パイロット導入・実証パートナー募集中
+<!-- 
+Image Prompt: 巨大な青い歯車が回ると、黄色のコインが自動的に排出される工場のライン。シンプルで幾何学的。
+-->
 
-_Visual: QRコード +  
-"Join the Trustless Supply Chain"_
+---
+
+# 11 STEPS
+
+<div class="visual-area">
+  <div class="visual-icon">🪜</div>
+  <div class="visual-label">成長に連動したマイルストーン</div>
+</div>
+
+<p class="subtext">
+  導入(20%) → 肥育(30%) → 成熟(30%) → 完了(20%)<br>
+  牛の生物学的な成長ステージに合わせて<br>
+  <span class="accent">細かく資金をアンロック</span>する。
+</p>
+
+<!-- 
+Image Prompt: 11段の階段を登っていく牛のシルエット。各段にコインが置かれている。横からの視点。フラットデザイン。
+-->
+
+---
+
+# DYNAMIC NFT
+
+<div class="visual-area">
+  <div class="visual-icon">🖼️ 🐂 🖼️</div>
+  <div class="visual-label">進化する証明書</div>
+</div>
+
+<p class="subtext">
+  契約の状態（ステート）を<span class="accent">可視化</span>。<br>
+  写真や体重データが提出されるたび、<br>
+  NFTの絵柄がリアルタイムに進化する。
+</p>
+
+<!-- 
+Image Prompt: 3枚のフレームが並んでいる。左から右へ、子牛→若牛→立派な和牛へと絵柄が変化している様子。
+-->
+
+---
+
+# VELOCITY
+
+<div class="visual-area">
+  <div class="visual-icon">🚀</div>
+  <div class="visual-label">キャッシュフローの加速</div>
+</div>
+
+<p class="subtext">
+  「2年に1回の入金」から<span class="accent">「毎月の入金」</span>へ。<br>
+  生産者の経営リスクを劇的に低減。<br>
+  お金の巡りを、牛の成長スピードに合わせる。
+</p>
+
+<!-- 
+Image Prompt: スピードメーターの針がMAX（黄色いゾーン）を振り切っている。背景に流れるような青いライン。
+-->
+
+---
+
+# FUTURE
+
+<div class="visual-area">
+  <div class="visual-icon">🌏</div>
+  <div class="visual-label">MVPから業界標準へ</div>
+</div>
+
+<p class="subtext">
+  現在: 単一ロットMVP (完了)<br>
+  次: 複数ロット管理・ファクトリーコントラクト<br>
+  <span class="accent">未来: 建設・製造業への水平展開</span>
+</p>
+
+<!-- 
+Image Prompt: 日本の地図から世界地図へ、青い線がネットワークのように広がっていく様子。
+-->
+
+---
+
+# BUILDERS
+
+<div class="visual-area">
+  <div class="visual-icon">🤝</div>
+  <div class="visual-label">WEB3 × AGRI</div>
+</div>
+
+<p class="subtext">
+  Solidityエンジニア、和牛の専門家、UIデザイナー。<br>
+  異なる領域のプロフェッショナルが<br>
+  <span class="accent">「実世界の課題」</span>をコードで解決する。
+</p>
+
+<!-- 
+Image Prompt: ラップトップPCとカウボーイハットが握手をしているようなアイコン的な構成。
+-->
+
+---
+
+# TRY IT
+
+<div class="visual-area" style="background: #fff; padding: 20px;">
+  <div class="visual-icon" style="color: #000; font-size: 8em;">📱</div>
+</div>
+
+<p class="subtext" style="font-family: 'JetBrains Mono'; font-size: 1.2em;">
+  https://wagyu-escrow-mvp.vercel.app
+</p>
+
+<p class="subtext">
+  <span class="accent">Let's Build Trust.</span>
+</p>

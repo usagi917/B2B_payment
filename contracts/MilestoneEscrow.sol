@@ -56,6 +56,7 @@ contract MilestoneEscrow is ReentrancyGuard {
     error OnlyBuyer();
     error OnlyProducer();
     error OnlyAdmin();
+    error OnlyBuyerOrAdmin();
     error AlreadyLocked();
     error NotLocked();
     error AlreadyCancelled();
@@ -78,6 +79,11 @@ contract MilestoneEscrow is ReentrancyGuard {
         _;
     }
 
+    modifier onlyBuyerOrAdmin() {
+        if (msg.sender != buyer && msg.sender != admin) revert OnlyBuyerOrAdmin();
+        _;
+    }
+
     modifier notCancelled() {
         if (cancelled) revert AlreadyCancelled();
         _;
@@ -93,7 +99,7 @@ contract MilestoneEscrow is ReentrancyGuard {
      * @param _token ERC20トークンアドレス
      * @param _buyer Buyerアドレス（ロック権限）
      * @param _producer Producerアドレス（申請・自動受取権限）
-     * @param _admin Adminアドレス（キャンセル権限）
+     * @param _admin Adminアドレス（キャンセル権限、buyerと同一でも可）
      * @param _totalAmount 総額
      */
     constructor(
@@ -278,12 +284,12 @@ contract MilestoneEscrow is ReentrancyGuard {
     }
 
     /**
-     * @notice Adminがエスクローをキャンセルし、未解放分をBuyerに返金
+     * @notice BuyerまたはAdminがエスクローをキャンセルし、未解放分をBuyerに返金
      * @param reason キャンセル理由
      */
     function cancel(string calldata reason)
         external
-        onlyAdmin
+        onlyBuyerOrAdmin
         notCancelled
         nonReentrant
     {

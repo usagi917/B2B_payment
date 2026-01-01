@@ -43,7 +43,6 @@ export function Actions({
   const { t } = useI18n();
   const [submitIndex, setSubmitIndex] = useState<number>(0);
   const [evidence, setEvidence] = useState("");
-  const [cancelReason, setCancelReason] = useState("");
 
   const pendingMilestones = useMemo(
     () =>
@@ -70,8 +69,8 @@ export function Actions({
   const isCancelled = summary.cancelled;
   const hasBuyerLock = userRole === "buyer" && !isLocked;
   const hasProducerSubmit = userRole === "producer" && isLocked && pendingMilestones.length > 0;
-  const hasAdminCancel = userRole === "admin";
-  const hasAnyActions = hasBuyerLock || hasProducerSubmit || hasAdminCancel;
+  const hasCancel = userRole === "admin" || userRole === "buyer";
+  const hasAnyActions = hasBuyerLock || hasProducerSubmit || hasCancel;
   const emptyMessage = !address
     ? t("connectWalletHint")
     : userRole === "none"
@@ -225,8 +224,8 @@ export function Actions({
             </div>
           )}
 
-          {/* Admin: Cancel */}
-          {hasAdminCancel && (
+          {/* Buyer/Admin: Cancel */}
+          {hasCancel && (
             <div className="p-4 rounded-xl bg-[#FFEBEE]">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5 text-[var(--color-error)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,29 +233,20 @@ export function Actions({
                 </svg>
                 <h3 className="font-medium text-[var(--color-error)]">{t("cancelContract")}</h3>
               </div>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder={t("cancelReasonPlaceholder")}
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  className="input"
-                />
-                <button
-                  onClick={() => onCancel(cancelReason)}
-                  disabled={isLoading || !cancelReason}
-                  className="btn btn-danger w-full"
-                >
-                  {isLoading ? (
-                    <>
-                      <LoadingSpinner />
-                      {t("processing")}
-                    </>
-                  ) : (
-                    t("cancelRefund")
-                  )}
-                </button>
-              </div>
+              <button
+                onClick={() => onCancel("")}
+                disabled={isLoading}
+                className="btn btn-danger w-full"
+              >
+                {isLoading ? (
+                  <>
+                    <LoadingSpinner />
+                    {t("processing")}
+                  </>
+                ) : (
+                  t("cancelRefund")
+                )}
+              </button>
             </div>
           )}
 

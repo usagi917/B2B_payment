@@ -50,9 +50,9 @@ pnpm install
 1. Connect a wallet and switch to the target network
 2. Buyer clicks “Lock Funds” (ERC20 approve → lock, two transactions)
 3. Producer selects a milestone and submits evidence text (auto payment)
-4. Admin can cancel and refund remaining funds if needed
+4. Buyer or Admin can cancel and refund remaining funds if needed
 
-Note: `submit` requires `lock` to be completed first. `cancel` can be executed by Admin at any time (no further actions after cancellation).
+Note: `submit` requires `lock` to be completed first. `cancel` can be executed by Buyer or Admin at any time (no further actions after cancellation).
 
 ### Dynamic NFT API (Optional)
 

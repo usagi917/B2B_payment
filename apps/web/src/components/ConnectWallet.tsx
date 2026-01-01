@@ -307,13 +307,13 @@ export function ConnectWallet({
                   variant="contained"
                   sx={{
                     py: 1.5,
-                    background: 'linear-gradient(135deg, var(--wagyu-gold) 0%, var(--wagyu-gold-dark) 100%)',
-                    color: 'var(--wagyu-charcoal)',
+                    background: 'linear-gradient(135deg, var(--color-info) 0%, var(--color-buyer) 100%)',
+                    color: 'var(--color-text)',
                     fontWeight: 600,
-                    boxShadow: 'var(--shadow-gold)',
+                    boxShadow: '0 4px 24px rgba(59, 130, 246, 0.35)',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, var(--wagyu-gold-light) 0%, var(--wagyu-gold) 100%)',
-                      boxShadow: 'var(--glow-gold)',
+                      background: 'linear-gradient(135deg, var(--color-buyer) 0%, var(--color-info) 100%)',
+                      boxShadow: '0 0 40px rgba(59, 130, 246, 0.45)',
                     },
                     '&:disabled': {
                       background: 'var(--color-surface-variant)',

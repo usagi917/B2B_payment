@@ -54,6 +54,9 @@
   --color-error-surface: rgba(239, 68, 68, 0.15);
   --color-info: #3B82F6;
   --color-info-surface: rgba(59, 130, 246, 0.15);
+  --color-progress: #3B82F6;
+  --color-progress-light: #60A5FA;
+  --color-progress-dark: #1D4ED8;
 
   /* Role Colors */
   --color-buyer: #60A5FA;
@@ -575,7 +578,7 @@ select.input {
 
 .milestone-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--wagyu-gold-dark), var(--wagyu-gold), var(--wagyu-gold-light));
+  background: linear-gradient(90deg, var(--color-progress-dark), var(--color-progress), var(--color-progress-light));
   background-size: 200% 100%;
   border-radius: var(--radius-full);
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);

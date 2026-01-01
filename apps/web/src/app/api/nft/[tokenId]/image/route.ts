@@ -75,6 +75,8 @@ function generateSVG(
   const accentColor = cancelled ? "#e74c3c" : "#f39c12";
   const successColor = "#27ae60";
   const pendingColor = "#3498db";
+  const progressStart = "#1d4ed8";
+  const progressEnd = "#60a5fa";
   const textColor = "#ecf0f1";
   const mutedColor = "#7f8c8d";
 
@@ -114,8 +116,8 @@ function generateSVG(
       <stop offset="100%" style="stop-color:${bgGradientEnd}"/>
     </linearGradient>
     <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:${successColor}"/>
-      <stop offset="100%" style="stop-color:${accentColor}"/>
+      <stop offset="0%" style="stop-color:${progressStart}"/>
+      <stop offset="100%" style="stop-color:${progressEnd}"/>
     </linearGradient>
     <filter id="glow">
       <feGaussianBlur stdDeviation="3" result="coloredBlur"/>

@@ -132,7 +132,7 @@ export function ContractSummary({
               className="progress-ring-circle"
               strokeWidth={strokeWidth}
               strokeLinecap="round"
-              stroke="var(--color-primary)"
+              stroke="var(--color-progress)"
               fill="transparent"
               r={radius}
               cx={size / 2}
