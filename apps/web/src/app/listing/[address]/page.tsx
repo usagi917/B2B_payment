@@ -82,6 +82,19 @@ export default function ListingDetailPage() {
   const totalCount = milestones.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
+  const milestoneAmounts = useMemo(() => {
+    if (!info) return [];
+    let sum = 0n;
+    return milestones.map((milestone, index) => {
+      if (index === milestones.length - 1) {
+        return info.totalAmount - sum;
+      }
+      const amount = (info.totalAmount * milestone.bps) / 10000n;
+      sum += amount;
+      return amount;
+    });
+  }, [info, milestones]);
+
   // Get next incomplete milestone for producer
   const nextMilestoneIndex = milestones.findIndex((m) => !m.completed);
 
@@ -552,7 +565,7 @@ export default function ListingDetailPage() {
 
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                           {milestones.map((milestone, index) => {
-                            const amount = (info.totalAmount * milestone.bps) / 10000n;
+                            const amount = milestoneAmounts[index] ?? 0n;
                             const isNext = index === nextMilestoneIndex && info.status === "active";
 
                             return (

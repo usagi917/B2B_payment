@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { parseUnits } from "viem";
 import {
   Box,
   Button,
@@ -40,6 +41,7 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [imageURI, setImageURI] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleSuccess = () => {
     setIsOpen(false);
@@ -47,6 +49,7 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
     setDescription("");
     setAmount("");
     setImageURI("");
+    setFormError(null);
     onSuccess?.();
   };
 
@@ -55,7 +58,14 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
   const handleSubmit = async () => {
     if (!title || !amount) return;
 
-    const amountBigInt = BigInt(parseFloat(amount) * Math.pow(10, decimals));
+    setFormError(null);
+    let amountBigInt: bigint;
+    try {
+      amountBigInt = parseUnits(amount, decimals);
+    } catch {
+      setFormError(locale === "ja" ? "金額の形式が正しくありません" : "Invalid amount format");
+      return;
+    }
     const categoryType = categoryToType(category);
     await createListing(categoryType, title, description, amountBigInt, imageURI);
   };
@@ -257,9 +267,9 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                   />
 
                   {/* Error */}
-                  {error && (
+                  {(formError || error) && (
                     <Alert severity="error" sx={{ borderRadius: 2 }}>
-                      {error}
+                      {formError || error}
                     </Alert>
                   )}
 

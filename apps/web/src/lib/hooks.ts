@@ -297,11 +297,10 @@ export function useCreateListing(onSuccess?: () => void) {
         });
 
         const receipt = await client.waitForTransactionReceipt({ hash });
-        setTxHash(hash);
-
-        if (receipt.status === "reverted") {
+        if (receipt.status !== "success") {
           throw new Error("出品トランザクションが失敗しました");
         }
+        setTxHash(hash);
         onSuccess?.();
       } catch (err) {
         setError(err instanceof Error ? err.message : "出品に失敗しました");
@@ -475,7 +474,10 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
           account,
         });
 
-        await client.waitForTransactionReceipt({ hash: hash1 });
+        const approveReceipt = await client.waitForTransactionReceipt({ hash: hash1 });
+        if (approveReceipt.status !== "success") {
+          throw new Error("承認トランザクションが失敗しました");
+        }
 
         // Then lock
         const hash2 = await wallet.writeContract({
@@ -486,7 +488,10 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
           account,
         });
 
-        await client.waitForTransactionReceipt({ hash: hash2 });
+        const lockReceipt = await client.waitForTransactionReceipt({ hash: hash2 });
+        if (lockReceipt.status !== "success") {
+          throw new Error("購入トランザクションが失敗しました");
+        }
         setTxHash(hash2);
         onSuccess?.();
       } catch (err) {
@@ -520,7 +525,10 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
           account,
         });
 
-        await client.waitForTransactionReceipt({ hash });
+        const receipt = await client.waitForTransactionReceipt({ hash });
+        if (receipt.status !== "success") {
+          throw new Error("完了報告トランザクションが失敗しました");
+        }
         setTxHash(hash);
         onSuccess?.();
       } catch (err) {
@@ -539,6 +547,11 @@ export function useEscrowEvents(escrowAddress: Address | null) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fromBlock, setFromBlock] = useState<bigint | null>(null);
+
+  useEffect(() => {
+    setFromBlock(null);
+  }, [escrowAddress, fromBlock]);
 
   const fetchEvents = useCallback(async () => {
     if (!escrowAddress) {
@@ -551,6 +564,44 @@ export function useEscrowEvents(escrowAddress: Address | null) {
 
     try {
       const client = createClient();
+      let effectiveFromBlock = fromBlock ?? 0n;
+      if (fromBlock === null) {
+        try {
+          const factoryAddress = await client.readContract({
+            address: escrowAddress,
+            abi: ESCROW_ABI,
+            functionName: "factory",
+          }) as Address;
+
+          const listingCreatedLogs = await client.getLogs({
+            address: factoryAddress,
+            event: {
+              type: "event",
+              name: "ListingCreated",
+              inputs: [
+                { name: "tokenId", type: "uint256", indexed: true },
+                { name: "escrow", type: "address", indexed: true },
+                { name: "producer", type: "address", indexed: true },
+                { name: "categoryType", type: "uint8", indexed: false },
+                { name: "totalAmount", type: "uint256", indexed: false },
+              ],
+            },
+            args: { escrow: escrowAddress },
+            fromBlock: 0n,
+            toBlock: "latest",
+          });
+
+          if (listingCreatedLogs.length > 0) {
+            effectiveFromBlock = listingCreatedLogs.reduce(
+              (min, log) => (log.blockNumber < min ? log.blockNumber : min),
+              listingCreatedLogs[0].blockNumber
+            );
+          }
+        } catch {
+          effectiveFromBlock = 0n;
+        }
+        setFromBlock(effectiveFromBlock);
+      }
 
       const [lockedLogs, completedLogs] = await Promise.all([
         client.getLogs({
@@ -563,7 +614,7 @@ export function useEscrowEvents(escrowAddress: Address | null) {
               { name: "amount", type: "uint256", indexed: false },
             ],
           },
-          fromBlock: 0n,
+          fromBlock: effectiveFromBlock,
           toBlock: "latest",
         }),
         client.getLogs({
@@ -576,7 +627,7 @@ export function useEscrowEvents(escrowAddress: Address | null) {
               { name: "amount", type: "uint256", indexed: false },
             ],
           },
-          fromBlock: 0n,
+          fromBlock: effectiveFromBlock,
           toBlock: "latest",
         }),
       ]);
@@ -612,7 +663,7 @@ export function useEscrowEvents(escrowAddress: Address | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [escrowAddress]);
+  }, [escrowAddress, fromBlock]);
 
   useEffect(() => {
     fetchEvents();

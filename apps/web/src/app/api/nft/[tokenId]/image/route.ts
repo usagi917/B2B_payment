@@ -30,6 +30,14 @@ const formatTokenAmount = (amount: bigint, decimals: number): string => {
   return (amount / divisor).toString();
 };
 
+const escapeSvgText = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 function generateSVG(
   tokenId: string,
   title: string,
@@ -54,6 +62,13 @@ function generateSVG(
   const categoryLabel = CATEGORY_LABELS[category]?.en || category;
   const categoryEmoji = category === "wagyu" ? "🐂" : category === "sake" ? "🍶" : category === "craft" ? "🏺" : "📦";
   const completedEmoji = status === "completed" ? "✨" : "";
+  const safeCategoryLabel = escapeSvgText(categoryLabel.toUpperCase());
+  const safeTitle = escapeSvgText(title.length > 25 ? `${title.slice(0, 25)}...` : title);
+  const safeTokenId = escapeSvgText(tokenId.padStart(3, "0"));
+  const safeStatus = escapeSvgText(status.toUpperCase());
+  const safeReleasedAmount = escapeSvgText(releasedAmount);
+  const safeTotalAmount = escapeSvgText(totalAmount);
+  const safeSymbol = escapeSvgText(symbol);
 
   // Generate milestone indicators
   const milestonesPerRow = 6;
@@ -67,11 +82,12 @@ function generateSVG(
 
       // Truncate name if too long
       const displayName = m.name.length > 4 ? m.name.slice(0, 4) : m.name;
+      const safeDisplayName = escapeSvgText(displayName);
 
       return `
         <g transform="translate(${x}, ${y})">
           <rect x="0" y="0" width="50" height="45" rx="8" fill="${fillColor}20" stroke="${fillColor}" stroke-width="2"/>
-          <text x="25" y="18" font-size="10" fill="${textColor}" text-anchor="middle">${displayName}</text>
+          <text x="25" y="18" font-size="10" fill="${textColor}" text-anchor="middle">${safeDisplayName}</text>
           <text x="25" y="36" font-size="14" fill="${fillColor}" text-anchor="middle">${icon}</text>
         </g>
       `;
@@ -115,17 +131,17 @@ function generateSVG(
   <!-- Category Badge -->
   <rect x="140" y="25" width="120" height="24" rx="12" fill="${accentColor}30"/>
   <text x="200" y="42" font-family="Arial, sans-serif" font-size="11" fill="${accentColor}" text-anchor="middle" font-weight="bold">
-    ${categoryLabel.toUpperCase()}
+    ${safeCategoryLabel}
   </text>
 
   <!-- Title -->
   <text x="200" y="80" font-family="Arial, sans-serif" font-size="20" fill="${textColor}" text-anchor="middle" font-weight="bold" filter="url(#glow)">
-    ${title.length > 25 ? title.slice(0, 25) + "..." : title}
+    ${safeTitle}
   </text>
 
   <!-- Token ID -->
   <text x="200" y="105" font-family="Arial, sans-serif" font-size="12" fill="${mutedColor}" text-anchor="middle">
-    Token #${tokenId.padStart(3, "0")}
+    Token #${safeTokenId}
   </text>
 
   <!-- Icon -->
@@ -134,7 +150,7 @@ function generateSVG(
   <!-- Status Badge -->
   <rect x="120" y="185" width="160" height="28" rx="14" fill="${status === "completed" ? successColor : status === "active" ? accentColor : pendingColor}30"/>
   <text x="200" y="204" font-family="Arial, sans-serif" font-size="12" fill="${status === "completed" ? successColor : status === "active" ? accentColor : pendingColor}" text-anchor="middle" font-weight="bold">
-    ${status.toUpperCase()}
+    ${safeStatus}
   </text>
 
   <!-- Progress Section -->
@@ -150,7 +166,7 @@ function generateSVG(
   </rect>
 
   <!-- Amount Info -->
-  <text x="40" y="295" font-family="Arial, sans-serif" font-size="12" fill="${mutedColor}">Released: ${releasedAmount} / ${totalAmount} ${symbol}</text>
+  <text x="40" y="295" font-family="Arial, sans-serif" font-size="12" fill="${mutedColor}">Released: ${safeReleasedAmount} / ${safeTotalAmount} ${safeSymbol}</text>
 
   <!-- Milestones Grid -->
   ${milestoneIndicators}
