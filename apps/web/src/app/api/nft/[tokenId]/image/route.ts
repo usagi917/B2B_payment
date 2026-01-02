@@ -24,7 +24,11 @@ const HTTP_STATUS = {
   INTERNAL_SERVER_ERROR: 500,
 } as const;
 
-const formatTokenAmount = (amount: bigint, decimals: number): string => {
+const normalizeDecimals = (decimals: bigint | number): number =>
+  typeof decimals === "bigint" ? Number(decimals) : decimals;
+
+const formatTokenAmount = (amount: bigint, decimalsInput: bigint | number): string => {
+  const decimals = normalizeDecimals(decimalsInput);
   if (decimals <= 0) return amount.toString();
   const divisor = 10n ** BigInt(decimals);
   return (amount / divisor).toString();
@@ -261,7 +265,7 @@ export async function GET(
         abi: ERC20_ABI,
         functionName: "decimals",
       }),
-    ]) as [string, number];
+    ]) as [string, bigint | number];
 
     // Calculate progress
     const completedCount = milestones.filter((m) => m.completed).length;

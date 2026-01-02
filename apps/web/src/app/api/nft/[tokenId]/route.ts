@@ -12,7 +12,11 @@ const resolveChain = () => {
   return SUPPORTED_CHAINS[chainKey] ?? polygonAmoy;
 };
 
-const formatTokenAmount = (amount: bigint, decimals: number) => {
+const normalizeDecimals = (decimals: bigint | number): number =>
+  typeof decimals === "bigint" ? Number(decimals) : decimals;
+
+const formatTokenAmount = (amount: bigint, decimalsInput: bigint | number) => {
+  const decimals = normalizeDecimals(decimalsInput);
   if (decimals <= 0) return amount.toString();
   const divisor = 10n ** BigInt(decimals);
   return (amount / divisor).toString();
@@ -96,7 +100,7 @@ export async function GET(
         abi: ERC20_ABI,
         functionName: "decimals",
       }),
-    ]) as [string, number];
+    ]) as [string, bigint | number];
 
     // Determine status label
     const statusLabels: Record<string, string> = {

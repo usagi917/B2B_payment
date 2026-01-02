@@ -102,6 +102,22 @@ export function useWallet() {
     }
   }, []);
 
+  useEffect(() => {
+    const provider = getMetaMaskProvider();
+    if (!provider) return;
+    provider
+      .request({ method: "eth_accounts" })
+      .then((accounts) => {
+        const typed = accounts as Address[];
+        if (typed.length > 0) {
+          setAddress(typed[0]);
+        }
+      })
+      .catch(() => {
+        // Silent: user may not have approved accounts yet.
+      });
+  }, []);
+
   return { address, isConnecting, error, connect, disconnect };
 }
 

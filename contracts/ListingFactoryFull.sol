@@ -77,6 +77,8 @@ contract MilestoneEscrowV3 is ReentrancyGuard {
     function submit(uint256 i) external nonReentrant {
         if (msg.sender != producer) revert Unauthorized();
         if (!locked || i >= milestones.length || milestones[i].completed) revert InvalidState();
+        uint256 nextIndex = _nextIncompleteIndex();
+        if (i != nextIndex) revert InvalidState();
         milestones[i].completed = true;
         uint256 amt;
         if (i == milestones.length - 1) {
@@ -87,6 +89,13 @@ contract MilestoneEscrowV3 is ReentrancyGuard {
         releasedAmount += amt;
         IERC20(tokenAddress).safeTransfer(producer, amt);
         emit Completed(i, amt);
+    }
+
+    function _nextIncompleteIndex() internal view returns (uint256) {
+        for (uint256 j; j < milestones.length; j++) {
+            if (!milestones[j].completed) return j;
+        }
+        return milestones.length;
     }
 
     function getMilestones() external view returns (Milestone[] memory) { return milestones; }

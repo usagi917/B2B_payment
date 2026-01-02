@@ -22,7 +22,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import LockIcon from "@mui/icons-material/Lock";
 import SendIcon from "@mui/icons-material/Send";
-import { Header, HeroNFT } from "@/components";
+import { Header, HeroNFT, ConnectWallet } from "@/components";
 import {
   useWallet,
   useEscrowInfo,
@@ -147,6 +147,18 @@ export default function ListingDetailPage() {
                   {locale === "ja" ? "一覧に戻る" : "Back to Listings"}
                 </Button>
               </Link>
+            </Box>
+
+            {/* Wallet */}
+            <Box sx={{ mb: 3 }}>
+              <ConnectWallet
+                address={wallet.address}
+                isConnecting={wallet.isConnecting}
+                error={wallet.error}
+                userRole={userRole}
+                onConnect={wallet.connect}
+                onDisconnect={wallet.disconnect}
+              />
             </Box>
 
             {/* Loading */}
