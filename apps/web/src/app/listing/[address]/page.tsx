@@ -22,7 +22,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import LockIcon from "@mui/icons-material/Lock";
 import SendIcon from "@mui/icons-material/Send";
-import { Header, HeroNFT, ConnectWallet } from "@/components";
+import { Header, HeroNFT, ConnectWallet, TxProgress } from "@/components";
 import {
   useWallet,
   useEscrowInfo,
@@ -30,6 +30,7 @@ import {
   useEscrowActions,
   useEscrowEvents,
   useTokenInfo,
+  usePurchaseValidation,
   formatAmount,
   getUserRole,
   shortenAddress,
@@ -59,13 +60,21 @@ export default function ListingDetailPage() {
   const { events, refetch: refetchEvents } = useEscrowEvents(escrowAddress);
   const { symbol, decimals } = useTokenInfo();
 
+  // Purchase validation (balance/allowance check)
+  const purchaseValidation = usePurchaseValidation(
+    wallet.address,
+    escrowAddress,
+    info?.totalAmount ?? 0n
+  );
+
   const handleSuccess = useCallback(() => {
     refetchInfo();
     refetchMilestones();
     refetchEvents();
-  }, [refetchInfo, refetchMilestones, refetchEvents]);
+    purchaseValidation.refetch();
+  }, [refetchInfo, refetchMilestones, refetchEvents, purchaseValidation]);
 
-  const { lock, submit, isLoading: actionLoading, error: actionError, txHash } = useEscrowActions(
+  const { lock, submit, isLoading: actionLoading, error: actionError, txHash, txStep, resetState } = useEscrowActions(
     escrowAddress,
     handleSuccess
   );
@@ -415,25 +424,106 @@ export default function ListingDetailPage() {
                             {locale === "ja" ? "アクション" : "Actions"}
                           </Typography>
 
-                          {/* Error */}
-                          {actionError && (
-                            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-                              {actionError}
-                            </Alert>
-                          )}
+                          {/* Transaction Progress */}
+                          <TxProgress
+                            step={txStep}
+                            txHash={txHash}
+                            error={actionError}
+                            onClose={resetState}
+                          />
 
-                          {/* Success */}
-                          {txHash && (
-                            <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-                              <a
-                                href={getTxUrl(txHash)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: "inherit" }}
+                          {/* Balance/Allowance Info (for potential buyers) */}
+                          {info.status === "open" && userRole !== "producer" && (
+                            <Box sx={{ mb: 2 }}>
+                              {/* Balance Display */}
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  p: 1.5,
+                                  mb: 1,
+                                  borderRadius: 2,
+                                  background: purchaseValidation.hasEnoughBalance
+                                    ? "var(--status-success-surface)"
+                                    : "var(--status-error-surface)",
+                                  border: `1px solid ${
+                                    purchaseValidation.hasEnoughBalance
+                                      ? "rgba(110, 191, 139, 0.25)"
+                                      : "rgba(214, 104, 83, 0.25)"
+                                  }`,
+                                }}
                               >
-                                {locale === "ja" ? "トランザクションを確認" : "View Transaction"}
-                              </a>
-                            </Alert>
+                                <Typography variant="body2" sx={{ color: "var(--color-text-secondary)" }}>
+                                  {locale === "ja" ? "残高" : "Balance"}
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 600,
+                                    color: purchaseValidation.hasEnoughBalance
+                                      ? "var(--status-success)"
+                                      : "var(--status-error)",
+                                  }}
+                                >
+                                  {formatAmount(purchaseValidation.balance, decimals, symbol)}
+                                </Typography>
+                              </Box>
+
+                              {/* Allowance Status */}
+                              {purchaseValidation.hasEnoughBalance && (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    background: "rgba(247, 243, 235, 0.02)",
+                                    border: "1px solid var(--color-border)",
+                                  }}
+                                >
+                                  <Typography variant="body2" sx={{ color: "var(--color-text-secondary)" }}>
+                                    {locale === "ja" ? "承認状況" : "Approval"}
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      fontWeight: 500,
+                                      color: purchaseValidation.hasEnoughAllowance
+                                        ? "var(--status-success)"
+                                        : "var(--color-text-muted)",
+                                    }}
+                                  >
+                                    {purchaseValidation.hasEnoughAllowance
+                                      ? locale === "ja"
+                                        ? "承認済み"
+                                        : "Approved"
+                                      : locale === "ja"
+                                      ? "承認が必要"
+                                      : "Needs Approval"}
+                                  </Typography>
+                                </Box>
+                              )}
+
+                              {/* Insufficient Balance Warning */}
+                              {!purchaseValidation.hasEnoughBalance && (
+                                <Alert
+                                  severity="warning"
+                                  sx={{
+                                    mt: 1,
+                                    borderRadius: 2,
+                                    background: "var(--status-warning-surface)",
+                                    color: "var(--status-warning)",
+                                    border: "1px solid rgba(232, 197, 71, 0.25)",
+                                  }}
+                                >
+                                  {locale === "ja"
+                                    ? `残高が${formatAmount(info.totalAmount - purchaseValidation.balance, decimals, symbol)}不足しています`
+                                    : `Insufficient balance by ${formatAmount(info.totalAmount - purchaseValidation.balance, decimals, symbol)}`}
+                                </Alert>
+                              )}
+                            </Box>
                           )}
 
                           {/* Lock Button (for non-producer, when open) */}
@@ -443,7 +533,7 @@ export default function ListingDetailPage() {
                               fullWidth
                               startIcon={actionLoading ? <CircularProgress size={20} /> : <LockIcon />}
                               onClick={handleLock}
-                              disabled={actionLoading}
+                              disabled={actionLoading || !purchaseValidation.hasEnoughBalance}
                               sx={{
                                 background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-rich) 100%)",
                                 color: "var(--sumi-black)",
@@ -456,12 +546,21 @@ export default function ListingDetailPage() {
                                   transform: "translateY(-2px)",
                                   boxShadow: "var(--shadow-medium), 0 0 40px var(--copper-glow)",
                                 },
+                                "&:disabled": {
+                                  background: "var(--color-surface-hover)",
+                                  color: "var(--color-text-muted)",
+                                  boxShadow: "none",
+                                },
                               }}
                             >
                               {actionLoading
                                 ? locale === "ja"
                                   ? "処理中..."
                                   : "Processing..."
+                                : purchaseValidation.needsApproval
+                                ? locale === "ja"
+                                  ? `承認して購入 (${formatAmount(info.totalAmount, decimals, symbol)})`
+                                  : `Approve & Purchase (${formatAmount(info.totalAmount, decimals, symbol)})`
                                 : locale === "ja"
                                 ? `購入する (${formatAmount(info.totalAmount, decimals, symbol)})`
                                 : `Purchase (${formatAmount(info.totalAmount, decimals, symbol)})`}

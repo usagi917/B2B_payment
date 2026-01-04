@@ -45,8 +45,11 @@ hackson/
 
 ### dApp (apps/web/)
 
-- **Stack**: Next.js 15 (App Router), TypeScript, viem, Tailwind CSS
-- **Pages**: `/` (listing + create form), `/listing/[address]` (detail + actions)
+- **Stack**: Next.js 15 (App Router), TypeScript, viem, MUI, Framer Motion
+- **Pages**:
+  - `/` - Listing index + create form
+  - `/listing/[address]` - Detail page with actions (lock/submit)
+  - `/my` - My Page (producer/buyer dashboard)
 - **No backend/DB**: All state from on-chain reads and events
 
 ## Build & Run Commands
@@ -101,14 +104,35 @@ NEXT_PUBLIC_BLOCK_EXPLORER_TX_BASE=https://amoy.polygonscan.com/tx/
 // Factory operations
 useCreateListing(category, title, description, totalAmount, imageURI)
 useListings() → address[]
+useListingSummaries() → ListingSummary[]
 
 // Per-Escrow operations
 useEscrowInfo(address) → { producer, buyer, totalAmount, locked, ... }
 useMilestones(address) → Milestone[]
-useLock(address)
-useSubmit(address, index)
-useEvents(address) → Event[]
+useEscrowActions(address) → { lock, submit, txStep, ... }
+useEscrowEvents(address) → Event[]
+
+// Token operations
+useTokenBalance(address) → balance
+useTokenAllowance(owner, spender) → allowance
+usePurchaseValidation(user, escrow, amount) → { hasEnoughBalance, needsApproval, ... }
+
+// Real-time & My Page
+useRealtimeEscrow(address, options) → auto-polling escrow state
+useRealtimeListingSummaries(options) → auto-polling listings
+useMyListings(address) → { asProducer, asBuyer, stats }
 ```
+
+### Transaction Progress (TxStep)
+```typescript
+type TxStep = "idle" | "checking" | "approving" | "approve-confirming"
+            | "signing" | "confirming" | "success" | "error";
+```
+- `checking`: Balance/allowance validation
+- `approving`: Waiting for ERC20 approve signature
+- `approve-confirming`: Waiting for approve tx confirmation
+- `signing`: Waiting for main tx signature
+- `confirming`: Waiting for main tx confirmation
 
 ## Deployment
 
@@ -116,3 +140,22 @@ useEvents(address) → Event[]
 2. Deploy ListingFactory with (tokenAddress)
 3. Set NEXT_PUBLIC_FACTORY_ADDRESS and NEXT_PUBLIC_TOKEN_ADDRESS
 4. Deploy dApp to Vercel
+
+## Pending Contract Upgrade: Evidence Hash
+
+Next contract version will add evidence hash support for milestone completion:
+
+```solidity
+// MilestoneEscrowV4 changes
+mapping(uint256 => bytes32) public evidenceHashes;
+event Completed(uint256 indexed index, uint256 amount, bytes32 evidenceHash);
+
+function submit(uint256 i, bytes32 _evidenceHash) external nonReentrant {
+    // ... existing validation
+    evidenceHashes[i] = _evidenceHash;
+    // ... existing payment logic
+    emit Completed(i, amt, _evidenceHash);
+}
+```
+
+Frontend is already prepared with `evidenceHash` parameter in `submit()` hook.
