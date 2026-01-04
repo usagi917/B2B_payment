@@ -23,6 +23,7 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import LockIcon from "@mui/icons-material/Lock";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import SendIcon from "@mui/icons-material/Send";
+import CancelIcon from "@mui/icons-material/Cancel";
 import { Header, HeroNFT, ConnectWallet, TxProgress } from "@/components";
 import {
   useWallet,
@@ -75,7 +76,7 @@ export default function ListingDetailPage() {
     purchaseValidation.refetch();
   }, [refetchInfo, refetchMilestones, refetchEvents, purchaseValidation]);
 
-  const { lock, submit, isLoading: actionLoading, error: actionError, txHash, txStep, resetState } = useEscrowActions(
+  const { lock, submit, cancel, isLoading: actionLoading, error: actionError, txHash, txStep, resetState } = useEscrowActions(
     escrowAddress,
     handleSuccess
   );
@@ -568,11 +569,36 @@ export default function ListingDetailPage() {
                             </Button>
                           )}
 
-                          {/* Producer's own listing message */}
-                          {info.status === "open" && userRole === "producer" && (
-                            <Typography sx={{ color: "var(--color-text-muted)", textAlign: "center" }}>
-                              {locale === "ja" ? "購入者を待っています..." : "Waiting for buyer..."}
-                            </Typography>
+                          {/* Producer's own listing - waiting message + cancel button */}
+                          {info.status === "open" && userRole === "producer" && txStep !== "success" && (
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                              <Typography sx={{ color: "var(--color-text-muted)", textAlign: "center" }}>
+                                {locale === "ja" ? "購入者を待っています..." : "Waiting for buyer..."}
+                              </Typography>
+                              <Button
+                                variant="outlined"
+                                fullWidth
+                                startIcon={actionLoading ? <CircularProgress size={20} /> : <CancelIcon />}
+                                onClick={cancel}
+                                disabled={actionLoading}
+                                sx={{
+                                  borderColor: "var(--status-error)",
+                                  color: "var(--status-error)",
+                                  "&:hover": {
+                                    borderColor: "var(--status-error)",
+                                    background: "var(--status-error-surface)",
+                                  },
+                                }}
+                              >
+                                {actionLoading
+                                  ? locale === "ja"
+                                    ? "処理中..."
+                                    : "Processing..."
+                                  : locale === "ja"
+                                  ? "出品をキャンセル"
+                                  : "Cancel Listing"}
+                              </Button>
+                            </Box>
                           )}
 
                           {/* Loading state while milestones refresh */}
@@ -625,6 +651,16 @@ export default function ListingDetailPage() {
                               <CheckCircleIcon sx={{ fontSize: 48, color: "var(--status-success)", mb: 1 }} />
                               <Typography sx={{ color: "var(--color-text)" }}>
                                 {locale === "ja" ? "全工程完了" : "All milestones completed"}
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {/* Cancelled message */}
+                          {info.status === "cancelled" && (
+                            <Box sx={{ textAlign: "center", py: 2 }}>
+                              <CancelIcon sx={{ fontSize: 48, color: "var(--status-error)", mb: 1 }} />
+                              <Typography sx={{ color: "var(--color-text)" }}>
+                                {locale === "ja" ? "この出品はキャンセルされました" : "This listing has been cancelled"}
                               </Typography>
                             </Box>
                           )}

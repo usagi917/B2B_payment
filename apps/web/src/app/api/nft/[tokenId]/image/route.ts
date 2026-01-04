@@ -87,25 +87,23 @@ function generateSVG(
   const safeTotalAmount = escapeSvgText(totalAmount);
   const safeSymbol = escapeSvgText(symbol);
 
-  // Generate milestone indicators
-  const milestonesPerRow = 6;
+  // Generate milestone indicators (vertical list for better readability)
   const milestoneIndicators = milestones
     .map((m, i) => {
-      const x = 40 + (i % milestonesPerRow) * 55;
-      const y = 320 + Math.floor(i / milestonesPerRow) * 60;
-
+      const y = 320 + i * 32;
       const fillColor = m.completed ? successColor : pendingColor;
       const icon = m.completed ? "✓" : "○";
 
-      // Truncate name if too long
-      const displayName = m.name.length > 4 ? m.name.slice(0, 4) : m.name;
+      // Display full name (truncate to 8 chars for very long names)
+      const displayName = m.name.length > 8 ? m.name.slice(0, 7) + "…" : m.name;
       const safeDisplayName = escapeSvgText(displayName);
 
       return `
-        <g transform="translate(${x}, ${y})">
-          <rect x="0" y="0" width="50" height="45" rx="8" fill="${fillColor}20" stroke="${fillColor}" stroke-width="2"/>
-          <text x="25" y="18" font-size="10" fill="${textColor}" text-anchor="middle">${safeDisplayName}</text>
-          <text x="25" y="36" font-size="14" fill="${fillColor}" text-anchor="middle">${icon}</text>
+        <g transform="translate(40, ${y})">
+          <circle cx="10" cy="10" r="10" fill="${fillColor}30" stroke="${fillColor}" stroke-width="2"/>
+          <text x="10" y="14" font-size="10" fill="${fillColor}" text-anchor="middle" font-weight="bold">${icon}</text>
+          <text x="28" y="14" font-size="11" fill="${m.completed ? textColor : mutedColor}" font-family="Arial, sans-serif">${safeDisplayName}</text>
+          <text x="360" y="14" font-size="10" fill="${mutedColor}" text-anchor="end" font-family="Arial, sans-serif">${(Number(m.bps) / 100).toFixed(0)}%</text>
         </g>
       `;
     })
@@ -115,9 +113,8 @@ function generateSVG(
   const progressBarWidth = 320;
   const progressFill = (progressPercent / 100) * progressBarWidth;
 
-  // Milestone rows count
-  const milestoneRows = Math.ceil(milestones.length / milestonesPerRow);
-  const svgHeight = 380 + milestoneRows * 60;
+  // Calculate SVG height based on milestone count
+  const svgHeight = 360 + milestones.length * 32;
 
   const svg = `
 <svg width="400" height="${svgHeight}" viewBox="0 0 400 ${svgHeight}" xmlns="http://www.w3.org/2000/svg">

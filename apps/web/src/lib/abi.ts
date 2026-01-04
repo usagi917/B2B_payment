@@ -90,7 +90,7 @@ export const FACTORY_ABI = [
   },
 ] as const;
 
-// MilestoneEscrowV4 ABI (per-listing escrow with evidence hash)
+// MilestoneEscrowV5 ABI (per-listing escrow with cancel support)
 export const ESCROW_ABI = [
   // Events
   {
@@ -109,6 +109,12 @@ export const ESCROW_ABI = [
       { name: "amount", type: "uint256", indexed: false },
       { name: "evidenceHash", type: "bytes32", indexed: false },
     ],
+  },
+  // V5: Cancelled event
+  {
+    type: "event",
+    name: "Cancelled",
+    inputs: [],
   },
   // Read functions
   {
@@ -163,6 +169,14 @@ export const ESCROW_ABI = [
   {
     type: "function",
     name: "locked",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  // V5: cancelled state
+  {
+    type: "function",
+    name: "cancelled",
     inputs: [],
     outputs: [{ name: "", type: "bool" }],
     stateMutability: "view",
@@ -285,6 +299,14 @@ export const ESCROW_ABI = [
   {
     type: "function",
     name: "lock",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  // V5: cancel function
+  {
+    type: "function",
+    name: "cancel",
     inputs: [],
     outputs: [],
     stateMutability: "nonpayable",

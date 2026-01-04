@@ -216,7 +216,7 @@ export function useListingSummaries() {
               title,
               description,
               imageURI,
-              status: status as "open" | "active" | "completed",
+              status: status as "open" | "active" | "completed" | "cancelled",
               progress: {
                 completed: Number(progress[0]),
                 total: Number(progress[1]),
@@ -389,7 +389,7 @@ export function useEscrowInfo(escrowAddress: Address | null) {
         title,
         description,
         imageURI,
-        status: status as "open" | "active" | "completed",
+        status: status as "open" | "active" | "completed" | "cancelled",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch escrow info");
@@ -617,7 +617,47 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
     [escrowAddress, onSuccess]
   );
 
-  return { lock, submit, isLoading, error, txHash, txStep, resetState };
+  // V5: Cancel function
+  const cancel = useCallback(async () => {
+    if (!escrowAddress) return;
+
+    setIsLoading(true);
+    setError(null);
+    setTxHash(null);
+    setTxStep("signing");
+
+    try {
+      const wallet = createWallet();
+      const client = createClient();
+      if (!wallet) throw new Error("Walletが接続されていません");
+
+      const [account] = await wallet.getAddresses();
+
+      const hash = await wallet.writeContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "cancel",
+        args: [],
+        account,
+      });
+
+      setTxStep("confirming");
+      setTxHash(hash);
+      const receipt = await client.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") {
+        throw new Error("キャンセルトランザクションが失敗しました");
+      }
+      setTxStep("success");
+      onSuccess?.();
+    } catch (err) {
+      setTxStep("error");
+      setError(err instanceof Error ? err.message : "キャンセルに失敗しました");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [escrowAddress, onSuccess]);
+
+  return { lock, submit, cancel, isLoading, error, txHash, txStep, resetState };
 }
 
 export function useEscrowEvents(escrowAddress: Address | null) {
