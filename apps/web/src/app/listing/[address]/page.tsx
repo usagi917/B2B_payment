@@ -21,6 +21,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import LockIcon from "@mui/icons-material/Lock";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import SendIcon from "@mui/icons-material/Send";
 import { Header, HeroNFT, ConnectWallet, TxProgress } from "@/components";
 import {
@@ -527,7 +528,7 @@ export default function ListingDetailPage() {
                           )}
 
                           {/* Lock Button (for non-producer, when open) */}
-                          {info.status === "open" && userRole !== "producer" && (
+                          {info.status === "open" && userRole !== "producer" && txStep !== "success" && (
                             <Button
                               variant="contained"
                               fullWidth
@@ -574,8 +575,15 @@ export default function ListingDetailPage() {
                             </Typography>
                           )}
 
+                          {/* Loading state while milestones refresh */}
+                          {info.status === "active" && userRole === "producer" && milestonesLoading && txStep === "idle" && (
+                            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                              <CircularProgress size={24} sx={{ color: "var(--color-primary)" }} />
+                            </Box>
+                          )}
+
                           {/* Submit Button (for producer, when active) */}
-                          {info.status === "active" && userRole === "producer" && nextMilestoneIndex >= 0 && (
+                          {info.status === "active" && userRole === "producer" && nextMilestoneIndex >= 0 && txStep !== "success" && !milestonesLoading && (
                             <Button
                               variant="contained"
                               fullWidth
@@ -691,6 +699,7 @@ export default function ListingDetailPage() {
                           {milestones.map((milestone, index) => {
                             const amount = milestoneAmounts[index] ?? 0n;
                             const isNext = index === nextMilestoneIndex && info.status === "active";
+                            const isFuture = !milestone.completed && index > nextMilestoneIndex && info.status === "active";
 
                             return (
                               <motion.div
@@ -712,12 +721,15 @@ export default function ListingDetailPage() {
                                       ? "var(--status-success-surface)"
                                       : "transparent",
                                     border: isNext ? "1px solid var(--color-border-accent)" : "1px solid transparent",
+                                    opacity: isFuture ? 0.6 : 1,
                                   }}
                                 >
                                   {/* Icon */}
                                   <Box sx={{ pt: 0.5 }}>
                                     {milestone.completed ? (
                                       <CheckCircleIcon sx={{ color: "var(--status-success)" }} />
+                                    ) : isFuture ? (
+                                      <LockOutlinedIcon sx={{ color: "var(--color-text-muted)", fontSize: "1.25rem" }} />
                                     ) : (
                                       <RadioButtonUncheckedIcon
                                         sx={{ color: isNext ? "var(--color-primary)" : "var(--color-text-muted)" }}
@@ -727,19 +739,32 @@ export default function ListingDetailPage() {
 
                                   {/* Content */}
                                   <Box sx={{ flex: 1 }}>
-                                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                                      <Typography
-                                        sx={{
-                                          fontWeight: 600,
-                                          color: milestone.completed
-                                            ? "var(--color-text)"
-                                            : isNext
-                                            ? "var(--color-primary)"
-                                            : "var(--color-text-secondary)",
-                                        }}
-                                      >
-                                        {milestone.name}
-                                      </Typography>
+                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <Typography
+                                          sx={{
+                                            fontWeight: 600,
+                                            color: milestone.completed
+                                              ? "var(--color-text)"
+                                              : isNext
+                                              ? "var(--color-primary)"
+                                              : "var(--color-text-secondary)",
+                                          }}
+                                        >
+                                          {milestone.name}
+                                        </Typography>
+                                        {isFuture && (
+                                          <Typography
+                                            variant="caption"
+                                            sx={{
+                                              color: "var(--color-text-muted)",
+                                              fontSize: "0.7rem",
+                                            }}
+                                          >
+                                            {locale === "ja" ? "順番待ち" : "Waiting"}
+                                          </Typography>
+                                        )}
+                                      </Box>
                                       <Typography
                                         sx={{
                                           color: milestone.completed
