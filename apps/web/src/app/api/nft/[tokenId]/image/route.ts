@@ -10,6 +10,19 @@ interface Milestone {
   completed: boolean;
 }
 
+// Milestone names by category type (same as hooks.ts)
+const MILESTONE_NAMES: Record<number, string[]> = {
+  0: ["素牛導入", "肥育開始", "肥育中1", "肥育中2", "肥育中3", "肥育中4", "肥育中5", "肥育中6", "出荷準備", "出荷", "納品完了"],
+  1: ["仕込み", "発酵", "熟成", "瓶詰め", "出荷"],
+  2: ["制作開始", "窯焼き", "絵付け", "仕上げ"],
+  3: ["完了"],
+};
+
+function getMilestoneName(categoryType: number, index: number): string {
+  const names = MILESTONE_NAMES[categoryType] || MILESTONE_NAMES[3];
+  return names[index] || `Step ${index + 1}`;
+}
+
 const resolveChain = () => {
   const chainId = Number(
     process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || polygonAmoy.id
@@ -222,7 +235,7 @@ export async function GET(
     }
 
     // Get escrow info (split into core and meta)
-    const [core, meta, milestonesResult] = await Promise.all([
+    const [core, meta, milestonesResult, categoryType] = await Promise.all([
       client.readContract({
         address: escrowAddress,
         abi: ESCROW_ABI,
@@ -238,17 +251,23 @@ export async function GET(
         abi: ESCROW_ABI,
         functionName: "getMilestones",
       }),
+      client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "categoryType",
+      }),
     ]) as readonly [
       readonly [Address, Address, Address, Address, bigint, bigint, bigint, boolean],
       readonly [string, string, string, string, string],
-      ReadonlyArray<{ bps: bigint | number; completed: boolean }>
+      ReadonlyArray<{ bps: bigint | number; completed: boolean }>,
+      number
     ];
 
     const [, tokenAddress, , , , totalAmount, releasedAmount] = core;
     const [category, title, , , status] = meta;
 
     const milestones: Milestone[] = milestonesResult.map((m, index) => ({
-      name: `Step ${index + 1}`,
+      name: getMilestoneName(categoryType, index),
       bps: m.bps,
       completed: m.completed,
     }));
