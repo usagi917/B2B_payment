@@ -54,15 +54,15 @@ const roleColors: Record<UserRole, { bg: string; color: string; border: string }
   buyer: {
     bg: 'var(--color-buyer-surface)',
     color: 'var(--color-buyer)',
-    border: 'rgba(96, 165, 250, 0.3)',
+    border: 'rgba(107, 163, 214, 0.25)',
   },
   producer: {
     bg: 'var(--color-producer-surface)',
     color: 'var(--color-producer)',
-    border: 'rgba(52, 211, 153, 0.3)',
+    border: 'rgba(110, 191, 139, 0.25)',
   },
   none: {
-    bg: 'var(--color-surface-variant)',
+    bg: 'var(--color-surface-hover)',
     color: 'var(--color-text-muted)',
     border: 'var(--color-border)',
   },
@@ -99,17 +99,25 @@ export function ConnectWallet({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
     >
       <Card
         sx={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid var(--glass-border)',
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
           borderRadius: 3,
+          overflow: 'hidden',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(180deg, rgba(247, 243, 235, 0.02) 0%, transparent 50%)',
+            pointerEvents: 'none',
+          },
         }}
       >
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: 3, position: 'relative' }}>
           {/* Header */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
             <Box
@@ -117,13 +125,14 @@ export function ConnectWallet({
                 width: 40,
                 height: 40,
                 borderRadius: 2,
-                background: 'var(--color-surface-variant)',
+                background: 'var(--color-primary-surface)',
+                border: '1px solid var(--color-border-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <AccountBalanceWalletIcon sx={{ color: 'var(--wagyu-gold)', fontSize: 20 }} />
+              <AccountBalanceWalletIcon sx={{ color: 'var(--color-primary)', fontSize: 20 }} />
             </Box>
             <Typography
               variant="h6"
@@ -150,10 +159,11 @@ export function ConnectWallet({
                   severity="error"
                   sx={{
                     mb: 2,
-                    background: 'var(--color-error-surface)',
-                    color: 'var(--color-error)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    '& .MuiAlert-icon': { color: 'var(--color-error)' },
+                    background: 'var(--status-error-surface)',
+                    color: 'var(--status-error)',
+                    border: '1px solid rgba(214, 104, 83, 0.25)',
+                    borderRadius: 2,
+                    '& .MuiAlert-icon': { color: 'var(--status-error)' },
                   }}
                 >
                   {error}
@@ -179,7 +189,7 @@ export function ConnectWallet({
                     gap: 2,
                     p: 2,
                     borderRadius: 2,
-                    background: 'var(--color-surface-variant)',
+                    background: 'var(--color-bg-elevated)',
                     border: '1px solid var(--color-border)',
                     mb: 2,
                   }}
@@ -191,11 +201,11 @@ export function ConnectWallet({
                         width: 44,
                         height: 44,
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, var(--wagyu-gold) 0%, var(--wagyu-gold-dark) 100%)',
+                        background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--copper-deep) 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: 'var(--shadow-gold)',
+                        boxShadow: 'var(--shadow-copper)',
                       }}
                     >
                       <svg
@@ -212,7 +222,7 @@ export function ConnectWallet({
                             width={0.84}
                             height={0.84}
                             rx={0.15}
-                            fill="var(--wagyu-charcoal)"
+                            fill="var(--sumi-black)"
                           />
                         ))}
                       </svg>
@@ -220,7 +230,7 @@ export function ConnectWallet({
                     {/* Online indicator */}
                     <Box
                       component={motion.div}
-                      animate={{ scale: [1, 1.2, 1] }}
+                      animate={{ scale: [1, 1.15, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
                       sx={{
                         position: 'absolute',
@@ -229,9 +239,9 @@ export function ConnectWallet({
                         width: 14,
                         height: 14,
                         borderRadius: '50%',
-                        background: 'var(--color-success)',
+                        background: 'var(--status-success)',
                         border: '3px solid var(--color-surface)',
-                        boxShadow: 'var(--glow-success)',
+                        boxShadow: '0 0 8px rgba(110, 191, 139, 0.4)',
                       }}
                     />
                   </Box>
@@ -261,6 +271,7 @@ export function ConnectWallet({
                         background: colors.bg,
                         color: colors.color,
                         border: `1px solid ${colors.border}`,
+                        borderRadius: 1,
                       }}
                     />
                   </Box>
@@ -273,13 +284,14 @@ export function ConnectWallet({
                   variant="outlined"
                   startIcon={<LogoutIcon sx={{ fontSize: 18 }} />}
                   sx={{
-                    borderColor: 'var(--color-border)',
+                    borderColor: 'var(--color-border-strong)',
                     color: 'var(--color-text-secondary)',
                     py: 1.25,
+                    borderRadius: 2,
                     '&:hover': {
-                      borderColor: 'var(--color-error)',
-                      color: 'var(--color-error)',
-                      background: 'var(--color-error-surface)',
+                      borderColor: 'var(--status-error)',
+                      color: 'var(--status-error)',
+                      background: 'var(--status-error-surface)',
                     },
                   }}
                 >
@@ -301,16 +313,20 @@ export function ConnectWallet({
                   variant="contained"
                   sx={{
                     py: 1.5,
-                    background: 'var(--color-info)',
-                    color: 'var(--color-text)',
+                    background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--copper-rich) 100%)',
+                    color: 'var(--sumi-black)',
                     fontWeight: 600,
-                    boxShadow: 'none',
+                    borderRadius: 2,
+                    boxShadow: 'var(--shadow-subtle), var(--shadow-copper)',
                     '&:hover': {
-                      background: 'var(--color-progress-dark)',
+                      background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--copper-deep) 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: 'var(--shadow-medium), 0 0 40px var(--copper-glow)',
                     },
                     '&:disabled': {
-                      background: 'var(--color-surface-variant)',
+                      background: 'var(--color-surface-hover)',
                       color: 'var(--color-text-muted)',
+                      boxShadow: 'none',
                     },
                   }}
                   startIcon={

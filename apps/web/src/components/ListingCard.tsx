@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Card, CardContent, Typography, Chip, LinearProgress } from "@mui/material";
+import { Box, Typography, Chip } from "@mui/material";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
@@ -29,34 +29,44 @@ export function ListingCard({ listing, tokenSymbol, tokenDecimals }: ListingCard
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
     >
       <Link href={`/listing/${listing.escrowAddress}`} style={{ textDecoration: "none" }}>
-        <Card
+        <Box
+          className="listing-card"
           sx={{
-            background: "var(--glass-bg)",
-            backdropFilter: "blur(20px)",
-            border: "1px solid var(--glass-border)",
+            display: "flex",
+            flexDirection: "column",
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
             borderRadius: 3,
+            overflow: "hidden",
             cursor: "pointer",
-            transition: "all 0.2s ease",
+            transition: "all 300ms cubic-bezier(0.16, 1, 0.3, 1)",
             "&:hover": {
+              borderColor: "var(--color-border-accent)",
               transform: "translateY(-4px)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
-              borderColor: "var(--wagyu-gold)",
+              boxShadow: "var(--shadow-medium), var(--shadow-copper)",
+            },
+            "&:hover .listing-card-image img": {
+              transform: "scale(1.05)",
+            },
+            "&:hover .listing-card-overlay": {
+              opacity: 1,
             },
           }}
         >
           {/* Image */}
-          {listing.imageURI && (
-            <Box
-              sx={{
-                width: "100%",
-                height: 180,
-                overflow: "hidden",
-                borderRadius: "12px 12px 0 0",
-              }}
-            >
+          <Box
+            className="listing-card-image"
+            sx={{
+              aspectRatio: "4 / 3",
+              overflow: "hidden",
+              background: "var(--color-bg-elevated)",
+              position: "relative",
+            }}
+          >
+            {listing.imageURI ? (
               <Box
                 component="img"
                 src={listing.imageURI}
@@ -65,45 +75,96 @@ export function ListingCard({ listing, tokenSymbol, tokenDecimals }: ListingCard
                   width: "100%",
                   height: "100%",
                   objectFit: "cover",
+                  transition: "transform 500ms cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
-            </Box>
-          )}
+            ) : (
+              <Box
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "linear-gradient(135deg, var(--color-bg-elevated) 0%, var(--color-surface-hover) 100%)",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "3rem",
+                    color: "var(--color-text-muted)",
+                    opacity: 0.3,
+                  }}
+                >
+                  {listing.category === "wagyu" ? "牛" : listing.category === "sake" ? "酒" : "匠"}
+                </Typography>
+              </Box>
+            )}
+            {/* Gradient overlay */}
+            <Box
+              className="listing-card-overlay"
+              sx={{
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(180deg, transparent 40%, rgba(10, 22, 40, 0.9) 100%)",
+                opacity: 0,
+                transition: "opacity 300ms ease",
+              }}
+            />
+          </Box>
 
-          <CardContent sx={{ p: 2.5 }}>
-            {/* Category & Status */}
-            <Box sx={{ display: "flex", gap: 1, mb: 1.5 }}>
+          {/* Content */}
+          <Box
+            sx={{
+              p: 2.5,
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Badges */}
+            <Box sx={{ display: "flex", gap: 0.75, mb: 1.5 }}>
               <Chip
                 label={categoryLabel}
                 size="small"
                 sx={{
-                  background: "var(--wagyu-gold)",
-                  color: "#000",
+                  background: "var(--color-primary-surface)",
+                  color: "var(--color-primary)",
+                  border: "1px solid var(--color-border-accent)",
                   fontWeight: 600,
-                  fontSize: "0.7rem",
+                  fontSize: "0.625rem",
+                  height: 24,
+                  borderRadius: 1,
                 }}
               />
               <Chip
                 label={statusLabel}
                 size="small"
                 color={statusConfig.color as "success" | "info" | "default"}
-                sx={{ fontSize: "0.7rem" }}
+                sx={{
+                  fontSize: "0.625rem",
+                  height: 24,
+                  borderRadius: 1,
+                }}
               />
             </Box>
 
             {/* Title */}
             <Typography
-              variant="h6"
               sx={{
+                fontFamily: "var(--font-display)",
                 fontWeight: 600,
+                fontSize: "1.125rem",
                 color: "var(--color-text)",
-                mb: 1,
+                mb: 0.75,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
+                lineHeight: 1.3,
               }}
             >
               {listing.title}
@@ -111,8 +172,8 @@ export function ListingCard({ listing, tokenSymbol, tokenDecimals }: ListingCard
 
             {/* Description */}
             <Typography
-              variant="body2"
               sx={{
+                fontSize: "0.875rem",
                 color: "var(--color-text-secondary)",
                 mb: 2,
                 overflow: "hidden",
@@ -120,71 +181,118 @@ export function ListingCard({ listing, tokenSymbol, tokenDecimals }: ListingCard
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: "vertical",
-                lineHeight: 1.4,
-                minHeight: "2.8em",
+                lineHeight: 1.55,
+                minHeight: "2.7em",
+                flex: 1,
               }}
             >
               {listing.description}
             </Typography>
 
-            {/* Price */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-              <Typography variant="caption" sx={{ color: "var(--color-text-muted)" }}>
-                {locale === "ja" ? "価格" : "Price"}
-              </Typography>
-              <Typography
-                variant="body1"
-                sx={{
-                  fontWeight: 700,
-                  color: "var(--wagyu-gold)",
-                }}
-              >
-                {formatAmount(listing.totalAmount, tokenDecimals, tokenSymbol)}
-              </Typography>
-            </Box>
-
-            {/* Progress */}
-            <Box sx={{ mb: 1 }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                <Typography variant="caption" sx={{ color: "var(--color-text-muted)" }}>
-                  {locale === "ja" ? "進捗" : "Progress"}
+            {/* Footer */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-end",
+                pt: 2,
+                borderTop: "1px solid var(--color-border)",
+              }}
+            >
+              {/* Price */}
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: "0.6875rem",
+                    color: "var(--color-text-muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    fontWeight: 600,
+                    mb: 0.25,
+                  }}
+                >
+                  {locale === "ja" ? "価格" : "Price"}
                 </Typography>
-                <Typography variant="caption" sx={{ color: "var(--color-text-secondary)" }}>
-                  {listing.progress.completed}/{listing.progress.total}
+                <Typography
+                  sx={{
+                    fontFamily: "var(--font-display)",
+                    fontWeight: 700,
+                    fontSize: "1.25rem",
+                    color: "var(--color-primary)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {formatAmount(listing.totalAmount, tokenDecimals, tokenSymbol)}
                 </Typography>
               </Box>
-              <LinearProgress
-                variant="determinate"
-                value={progressPercent}
-                sx={{
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  "& .MuiLinearProgress-bar": {
-                    background: "linear-gradient(90deg, var(--wagyu-gold), var(--wagyu-gold-light))",
-                    borderRadius: 3,
-                  },
-                }}
-              />
+
+              {/* Progress */}
+              <Box sx={{ textAlign: "right" }}>
+                <Typography
+                  sx={{
+                    fontSize: "0.6875rem",
+                    color: "var(--color-text-muted)",
+                    mb: 0.5,
+                  }}
+                >
+                  {listing.progress.completed}/{listing.progress.total}
+                </Typography>
+                <Box
+                  sx={{
+                    width: 80,
+                    height: 3,
+                    background: "var(--color-border)",
+                    borderRadius: "9999px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: `${progressPercent}%`,
+                      height: "100%",
+                      background: "var(--color-primary)",
+                      borderRadius: "9999px",
+                      transition: "width 500ms cubic-bezier(0.16, 1, 0.3, 1)",
+                    }}
+                  />
+                </Box>
+              </Box>
             </Box>
 
             {/* Producer */}
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <Typography variant="caption" sx={{ color: "var(--color-text-muted)" }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mt: 1.5,
+                pt: 1.5,
+                borderTop: "1px solid var(--color-divider)",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: "0.6875rem",
+                  color: "var(--color-text-muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  fontWeight: 500,
+                }}
+              >
                 {locale === "ja" ? "生産者" : "Producer"}
               </Typography>
               <Typography
-                variant="caption"
                 sx={{
                   fontFamily: "monospace",
+                  fontSize: "0.75rem",
                   color: "var(--color-text-secondary)",
                 }}
               >
                 {shortenAddress(listing.producer)}
               </Typography>
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </Box>
       </Link>
     </motion.div>
   );

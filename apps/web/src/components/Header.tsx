@@ -15,9 +15,11 @@ export function Header({ onLocaleChange }: HeaderProps) {
     <AppBar
       position="sticky"
       elevation={0}
+      className="header"
       sx={{
-        background: 'rgba(13, 13, 15, 0.9)',
-        backdropFilter: 'blur(24px)',
+        background: 'rgba(10, 22, 40, 0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid var(--color-border)',
       }}
     >
@@ -33,7 +35,7 @@ export function Header({ onLocaleChange }: HeaderProps) {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Box
@@ -41,12 +43,12 @@ export function Header({ onLocaleChange }: HeaderProps) {
                 src="/jpyc-logo.png"
                 alt="JPYC logo"
                 sx={{
-                  width: 44,
-                  height: 44,
+                  width: 40,
+                  height: 40,
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  boxShadow: 'var(--shadow-sm)',
-                  border: '2px solid var(--glass-border)',
+                  border: '1px solid var(--color-border-accent)',
+                  boxShadow: 'var(--shadow-subtle)',
                 }}
               />
               <Box>
@@ -55,9 +57,10 @@ export function Header({ onLocaleChange }: HeaderProps) {
                   sx={{
                     fontFamily: 'var(--font-display)',
                     fontWeight: 600,
-                    fontSize: { xs: '0.95rem', sm: '1.1rem' },
+                    fontSize: { xs: '1rem', sm: '1.125rem' },
                     color: 'var(--color-text)',
                     letterSpacing: '0.02em',
+                    lineHeight: 1.2,
                   }}
                 >
                   {t("appTitle")}
@@ -65,10 +68,11 @@ export function Header({ onLocaleChange }: HeaderProps) {
                 <Typography
                   variant="body2"
                   sx={{
-                    fontSize: '0.7rem',
-                    color: 'var(--wagyu-gold)',
-                    letterSpacing: '0.1em',
+                    fontSize: '0.6875rem',
+                    color: 'var(--color-primary)',
+                    letterSpacing: '0.12em',
                     textTransform: 'uppercase',
+                    fontWeight: 600,
                     display: { xs: 'none', sm: 'block' },
                   }}
                 >
@@ -82,7 +86,7 @@ export function Header({ onLocaleChange }: HeaderProps) {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
           >
             <ToggleButtonGroup
               value={locale}
@@ -90,34 +94,33 @@ export function Header({ onLocaleChange }: HeaderProps) {
               onChange={(_, newLocale) => newLocale && onLocaleChange(newLocale)}
               size="small"
               sx={{
-                background: 'transparent',
+                background: 'rgba(45, 62, 95, 0.5)',
                 borderRadius: 2,
-                border: 'none',
+                p: 0.5,
                 gap: 0.5,
                 '& .MuiToggleButtonGroup-grouped': {
                   margin: 0,
                   border: 'none',
+                  borderRadius: '6px !important',
                 },
                 '& .MuiToggleButton-root': {
-                  color: 'var(--color-text)',
+                  color: 'var(--color-text-secondary)',
                   border: 'none',
-                  background: 'var(--color-info)',
-                  boxShadow: 'none',
                   px: 2,
                   py: 0.75,
                   fontSize: '0.75rem',
                   fontWeight: 600,
                   letterSpacing: '0.05em',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 200ms ease',
                   '&:hover': {
-                    background: 'var(--color-progress-dark)',
+                    background: 'rgba(212, 165, 116, 0.08)',
+                    color: 'var(--color-primary)',
                   },
                   '&.Mui-selected': {
-                    background: 'var(--color-progress-dark)',
-                    color: 'var(--color-text)',
-                    boxShadow: 'none',
+                    background: 'rgba(212, 165, 116, 0.15)',
+                    color: 'var(--color-primary)',
                     '&:hover': {
-                      background: 'var(--color-progress-dark)',
+                      background: 'rgba(212, 165, 116, 0.2)',
                     },
                   },
                 },

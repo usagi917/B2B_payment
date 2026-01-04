@@ -140,7 +140,8 @@ export default function ListingDetailPage() {
                   sx={{
                     color: "var(--color-text-secondary)",
                     "&:hover": {
-                      color: "var(--wagyu-gold)",
+                      color: "var(--color-primary)",
+                      background: "var(--color-primary-surface)",
                     },
                   }}
                 >
@@ -164,7 +165,7 @@ export default function ListingDetailPage() {
             {/* Loading */}
             {isLoading && (
               <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-                <CircularProgress sx={{ color: "var(--wagyu-gold)" }} />
+                <CircularProgress sx={{ color: "var(--color-primary)" }} />
               </Box>
             )}
 
@@ -194,16 +195,16 @@ export default function ListingDetailPage() {
                     {/* Dynamic NFT */}
                     <Card
                       sx={{
-                        background: "var(--glass-bg)",
+                        background: "var(--color-surface)",
                         backdropFilter: "blur(20px)",
-                        border: "1px solid var(--glass-border)",
+                        border: "1px solid var(--color-border)",
                         borderRadius: 3,
                       }}
                     >
                       <CardContent sx={{ p: 3 }}>
                         <Typography
                           variant="h6"
-                          sx={{ fontWeight: 600, color: "var(--color-text)", mb: 2 }}
+                          sx={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--color-text)", mb: 2 }}
                         >
                           {locale === "ja" ? "ダイナミックNFT" : "Dynamic NFT"}
                         </Typography>
@@ -218,9 +219,9 @@ export default function ListingDetailPage() {
                     {/* Main Card */}
                     <Card
                       sx={{
-                        background: "var(--glass-bg)",
+                        background: "var(--color-surface)",
                         backdropFilter: "blur(20px)",
-                        border: "1px solid var(--glass-border)",
+                        border: "1px solid var(--color-border)",
                         borderRadius: 3,
                       }}
                     >
@@ -254,9 +255,11 @@ export default function ListingDetailPage() {
                             label={CATEGORY_LABELS[info.category]?.[locale] || info.category}
                             size="small"
                             sx={{
-                              background: "var(--wagyu-gold)",
-                              color: "#000",
+                              background: "var(--color-primary-surface)",
+                              color: "var(--color-primary)",
+                              border: "1px solid var(--color-border-accent)",
                               fontWeight: 600,
+                              borderRadius: 1,
                             }}
                           />
                           <Chip
@@ -270,6 +273,7 @@ export default function ListingDetailPage() {
                         <Typography
                           variant="h4"
                           sx={{
+                            fontFamily: "var(--font-display)",
                             fontWeight: 700,
                             color: "var(--color-text)",
                             mb: 2,
@@ -290,7 +294,7 @@ export default function ListingDetailPage() {
                           {info.description}
                         </Typography>
 
-                        <Divider sx={{ borderColor: "var(--glass-border)", mb: 3 }} />
+                        <Divider sx={{ borderColor: "var(--color-border)", mb: 3 }} />
 
                         {/* Price */}
                         <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
@@ -299,9 +303,10 @@ export default function ListingDetailPage() {
                           </Typography>
                           <Typography
                             sx={{
+                              fontFamily: "var(--font-display)",
                               fontWeight: 700,
                               fontSize: "1.25rem",
-                              color: "var(--wagyu-gold)",
+                              color: "var(--color-primary)",
                             }}
                           >
                             {formatAmount(info.totalAmount, decimals, symbol)}
@@ -336,14 +341,14 @@ export default function ListingDetailPage() {
                               borderRadius: 4,
                               backgroundColor: "rgba(255, 255, 255, 0.1)",
                               "& .MuiLinearProgress-bar": {
-                                background: "linear-gradient(90deg, var(--wagyu-gold), var(--wagyu-gold-light))",
+                                background: "linear-gradient(90deg, var(--color-primary), var(--copper-rich))",
                                 borderRadius: 4,
                               },
                             }}
                           />
                         </Box>
 
-                        <Divider sx={{ borderColor: "var(--glass-border)", mb: 3 }} />
+                        <Divider sx={{ borderColor: "var(--color-border)", mb: 3 }} />
 
                         {/* Addresses */}
                         <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
@@ -355,7 +360,7 @@ export default function ListingDetailPage() {
                               href={getAddressUrl(info.producer)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ color: "var(--wagyu-gold)", fontFamily: "monospace", fontSize: "0.85rem" }}
+                              style={{ color: "var(--color-primary)", fontFamily: "monospace", fontSize: "0.85rem" }}
                             >
                               {shortenAddress(info.producer)}
                             </a>
@@ -369,7 +374,7 @@ export default function ListingDetailPage() {
                                 href={getAddressUrl(info.buyer)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                style={{ color: "var(--wagyu-gold)", fontFamily: "monospace", fontSize: "0.85rem" }}
+                                style={{ color: "var(--color-primary)", fontFamily: "monospace", fontSize: "0.85rem" }}
                               >
                                 {shortenAddress(info.buyer)}
                               </a>
@@ -383,7 +388,7 @@ export default function ListingDetailPage() {
                               href={getAddressUrl(escrowAddress)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ color: "var(--wagyu-gold)", fontFamily: "monospace", fontSize: "0.85rem" }}
+                              style={{ color: "var(--color-primary)", fontFamily: "monospace", fontSize: "0.85rem" }}
                             >
                               {shortenAddress(escrowAddress)}
                             </a>
@@ -396,16 +401,16 @@ export default function ListingDetailPage() {
                     {wallet.address && (
                       <Card
                         sx={{
-                          background: "var(--glass-bg)",
+                          background: "var(--color-surface)",
                           backdropFilter: "blur(20px)",
-                          border: "1px solid var(--glass-border)",
+                          border: "1px solid var(--color-border)",
                           borderRadius: 3,
                         }}
                       >
                         <CardContent sx={{ p: 3 }}>
                           <Typography
                             variant="h6"
-                            sx={{ fontWeight: 600, color: "var(--color-text)", mb: 2 }}
+                            sx={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--color-text)", mb: 2 }}
                           >
                             {locale === "ja" ? "アクション" : "Actions"}
                           </Typography>
@@ -440,12 +445,16 @@ export default function ListingDetailPage() {
                               onClick={handleLock}
                               disabled={actionLoading}
                               sx={{
-                                background: "linear-gradient(135deg, var(--wagyu-gold), var(--wagyu-gold-light))",
-                                color: "#000",
+                                background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-rich) 100%)",
+                                color: "var(--sumi-black)",
                                 fontWeight: 600,
                                 py: 1.5,
+                                borderRadius: 2,
+                                boxShadow: "var(--shadow-subtle), var(--shadow-copper)",
                                 "&:hover": {
-                                  background: "linear-gradient(135deg, var(--wagyu-gold-light), var(--wagyu-gold))",
+                                  background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-deep) 100%)",
+                                  transform: "translateY(-2px)",
+                                  boxShadow: "var(--shadow-medium), 0 0 40px var(--copper-glow)",
                                 },
                               }}
                             >
@@ -475,12 +484,14 @@ export default function ListingDetailPage() {
                               onClick={() => handleSubmit(nextMilestoneIndex)}
                               disabled={actionLoading}
                               sx={{
-                                background: "linear-gradient(135deg, var(--wagyu-gold), var(--wagyu-gold-light))",
-                                color: "#000",
+                                background: "linear-gradient(135deg, var(--status-success) 0%, #5A9E73 100%)",
+                                color: "var(--sumi-black)",
                                 fontWeight: 600,
                                 py: 1.5,
+                                borderRadius: 2,
                                 "&:hover": {
-                                  background: "linear-gradient(135deg, var(--wagyu-gold-light), var(--wagyu-gold))",
+                                  transform: "translateY(-2px)",
+                                  boxShadow: "var(--shadow-medium), 0 0 30px rgba(110, 191, 139, 0.3)",
                                 },
                               }}
                             >
@@ -518,9 +529,9 @@ export default function ListingDetailPage() {
                     {!wallet.address && info.status === "open" && (
                       <Card
                         sx={{
-                          background: "var(--glass-bg)",
+                          background: "var(--color-surface)",
                           backdropFilter: "blur(20px)",
-                          border: "1px solid var(--glass-border)",
+                          border: "1px solid var(--color-border)",
                           borderRadius: 3,
                         }}
                       >
@@ -535,12 +546,14 @@ export default function ListingDetailPage() {
                             onClick={wallet.connect}
                             disabled={wallet.isConnecting}
                             sx={{
-                              background: "var(--color-info)",
-                              color: "var(--color-text)",
+                              background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-rich) 100%)",
+                              color: "var(--sumi-black)",
                               fontWeight: 600,
-                              boxShadow: "none",
+                              borderRadius: 2,
+                              boxShadow: "var(--shadow-subtle), var(--shadow-copper)",
                               "&:hover": {
-                                background: "var(--color-progress-dark)",
+                                background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-deep) 100%)",
+                                transform: "translateY(-2px)",
                               },
                             }}
                           >
@@ -561,16 +574,16 @@ export default function ListingDetailPage() {
                   <Box>
                     <Card
                       sx={{
-                        background: "var(--glass-bg)",
+                        background: "var(--color-surface)",
                         backdropFilter: "blur(20px)",
-                        border: "1px solid var(--glass-border)",
+                        border: "1px solid var(--color-border)",
                         borderRadius: 3,
                       }}
                     >
                       <CardContent sx={{ p: 3 }}>
                         <Typography
                           variant="h6"
-                          sx={{ fontWeight: 600, color: "var(--color-text)", mb: 3 }}
+                          sx={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--color-text)", mb: 3 }}
                         >
                           {locale === "ja" ? "マイルストーン" : "Milestones"}
                         </Typography>
@@ -595,11 +608,11 @@ export default function ListingDetailPage() {
                                     p: 2,
                                     borderRadius: 2,
                                     background: isNext
-                                      ? "rgba(212, 175, 55, 0.1)"
+                                      ? "var(--color-primary-surface)"
                                       : milestone.completed
-                                      ? "rgba(76, 175, 80, 0.1)"
+                                      ? "var(--status-success-surface)"
                                       : "transparent",
-                                    border: isNext ? "1px solid var(--wagyu-gold)" : "1px solid transparent",
+                                    border: isNext ? "1px solid var(--color-border-accent)" : "1px solid transparent",
                                   }}
                                 >
                                   {/* Icon */}
@@ -608,7 +621,7 @@ export default function ListingDetailPage() {
                                       <CheckCircleIcon sx={{ color: "var(--status-success)" }} />
                                     ) : (
                                       <RadioButtonUncheckedIcon
-                                        sx={{ color: isNext ? "var(--wagyu-gold)" : "var(--color-text-muted)" }}
+                                        sx={{ color: isNext ? "var(--color-primary)" : "var(--color-text-muted)" }}
                                       />
                                     )}
                                   </Box>
@@ -622,7 +635,7 @@ export default function ListingDetailPage() {
                                           color: milestone.completed
                                             ? "var(--color-text)"
                                             : isNext
-                                            ? "var(--wagyu-gold)"
+                                            ? "var(--color-primary)"
                                             : "var(--color-text-secondary)",
                                         }}
                                       >
@@ -659,16 +672,16 @@ export default function ListingDetailPage() {
                       <Card
                         sx={{
                           mt: 3,
-                          background: "var(--glass-bg)",
+                          background: "var(--color-surface)",
                           backdropFilter: "blur(20px)",
-                          border: "1px solid var(--glass-border)",
+                          border: "1px solid var(--color-border)",
                           borderRadius: 3,
                         }}
                       >
                         <CardContent sx={{ p: 3 }}>
                           <Typography
                             variant="h6"
-                            sx={{ fontWeight: 600, color: "var(--color-text)", mb: 3 }}
+                            sx={{ fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--color-text)", mb: 3 }}
                           >
                             {locale === "ja" ? "イベント履歴" : "Event History"}
                           </Typography>
@@ -688,8 +701,9 @@ export default function ListingDetailPage() {
                                     justifyContent: "space-between",
                                     alignItems: "center",
                                     p: 1.5,
-                                    borderRadius: 1,
-                                    background: "rgba(255, 255, 255, 0.02)",
+                                    borderRadius: 2,
+                                    background: "rgba(247, 243, 235, 0.02)",
+                                    border: "1px solid var(--color-border)",
                                   }}
                                 >
                                   <Box>
@@ -715,7 +729,7 @@ export default function ListingDetailPage() {
                                     href={getTxUrl(event.txHash)}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    style={{ color: "var(--wagyu-gold)", fontSize: "0.85rem" }}
+                                    style={{ color: "var(--color-primary)", fontSize: "0.85rem" }}
                                   >
                                     {locale === "ja" ? "TX確認" : "View TX"}
                                   </a>

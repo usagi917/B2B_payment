@@ -1,2 +1,2 @@
 export { ThemeProvider } from './ThemeProvider';
-export { wagyuTheme, wagyuColors, semanticColors } from './wagyuTheme';
+export { wagyuTheme, zenColors, statusColors } from './wagyuTheme';

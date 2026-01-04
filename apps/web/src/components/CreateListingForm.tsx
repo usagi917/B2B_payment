@@ -101,14 +101,17 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
               startIcon={<AddIcon />}
               onClick={() => setIsOpen(true)}
               sx={{
-                background: "var(--color-info)",
-                color: "var(--color-text)",
+                background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-rich) 100%)",
+                color: "var(--sumi-black)",
                 fontWeight: 600,
                 px: 3,
                 py: 1.5,
                 borderRadius: 2,
+                boxShadow: "var(--shadow-subtle), var(--shadow-copper)",
                 "&:hover": {
-                  background: "var(--color-progress-dark)",
+                  background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-deep) 100%)",
+                  transform: "translateY(-2px)",
+                  boxShadow: "var(--shadow-medium), 0 0 40px var(--copper-glow)",
                 },
               }}
             >
@@ -120,19 +123,29 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
           >
             <Card
               sx={{
-                background: "var(--glass-bg)",
-                backdropFilter: "blur(20px)",
-                border: "1px solid var(--glass-border)",
+                background: "var(--color-surface)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 3,
+                overflow: "hidden",
+                position: "relative",
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(180deg, rgba(247, 243, 235, 0.02) 0%, transparent 50%)",
+                  pointerEvents: "none",
+                },
               }}
             >
-              <CardContent sx={{ p: 3 }}>
+              <CardContent sx={{ p: 3, position: "relative" }}>
                 <Typography
                   variant="h6"
                   sx={{
+                    fontFamily: "var(--font-display)",
                     fontWeight: 600,
                     color: "var(--color-text)",
                     mb: 3,
@@ -144,7 +157,7 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
                   {/* Category */}
                   <FormControl fullWidth>
-                    <InputLabel sx={{ color: "var(--color-text-secondary)" }}>
+                    <InputLabel sx={{ color: "var(--color-text-muted)" }}>
                       {t.category}
                     </InputLabel>
                     <Select
@@ -153,11 +166,16 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                       label={t.category}
                       sx={{
                         color: "var(--color-text)",
+                        background: "var(--color-bg-elevated)",
+                        borderRadius: 2,
                         "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "var(--glass-border)",
+                          borderColor: "var(--color-border)",
                         },
                         "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "var(--wagyu-gold)",
+                          borderColor: "var(--color-border-strong)",
+                        },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "var(--color-primary)",
                         },
                       }}
                     >
@@ -180,15 +198,24 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                     sx={{
                       "& .MuiOutlinedInput-root": {
                         color: "var(--color-text)",
+                        background: "var(--color-bg-elevated)",
+                        borderRadius: 2,
                         "& fieldset": {
-                          borderColor: "var(--glass-border)",
+                          borderColor: "var(--color-border)",
                         },
                         "&:hover fieldset": {
-                          borderColor: "var(--wagyu-gold)",
+                          borderColor: "var(--color-border-strong)",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "var(--color-primary)",
+                          boxShadow: "0 0 0 3px var(--color-primary-surface)",
                         },
                       },
                       "& .MuiInputLabel-root": {
-                        color: "var(--color-text-secondary)",
+                        color: "var(--color-text-muted)",
+                        "&.Mui-focused": {
+                          color: "var(--color-primary)",
+                        },
                       },
                     }}
                   />
@@ -205,15 +232,24 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                     sx={{
                       "& .MuiOutlinedInput-root": {
                         color: "var(--color-text)",
+                        background: "var(--color-bg-elevated)",
+                        borderRadius: 2,
                         "& fieldset": {
-                          borderColor: "var(--glass-border)",
+                          borderColor: "var(--color-border)",
                         },
                         "&:hover fieldset": {
-                          borderColor: "var(--wagyu-gold)",
+                          borderColor: "var(--color-border-strong)",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "var(--color-primary)",
+                          boxShadow: "0 0 0 3px var(--color-primary-surface)",
                         },
                       },
                       "& .MuiInputLabel-root": {
-                        color: "var(--color-text-secondary)",
+                        color: "var(--color-text-muted)",
+                        "&.Mui-focused": {
+                          color: "var(--color-primary)",
+                        },
                       },
                     }}
                   />
@@ -230,15 +266,24 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                     sx={{
                       "& .MuiOutlinedInput-root": {
                         color: "var(--color-text)",
+                        background: "var(--color-bg-elevated)",
+                        borderRadius: 2,
                         "& fieldset": {
-                          borderColor: "var(--glass-border)",
+                          borderColor: "var(--color-border)",
                         },
                         "&:hover fieldset": {
-                          borderColor: "var(--wagyu-gold)",
+                          borderColor: "var(--color-border-strong)",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "var(--color-primary)",
+                          boxShadow: "0 0 0 3px var(--color-primary-surface)",
                         },
                       },
                       "& .MuiInputLabel-root": {
-                        color: "var(--color-text-secondary)",
+                        color: "var(--color-text-muted)",
+                        "&.Mui-focused": {
+                          color: "var(--color-primary)",
+                        },
                       },
                     }}
                   />
@@ -253,29 +298,54 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                     sx={{
                       "& .MuiOutlinedInput-root": {
                         color: "var(--color-text)",
+                        background: "var(--color-bg-elevated)",
+                        borderRadius: 2,
                         "& fieldset": {
-                          borderColor: "var(--glass-border)",
+                          borderColor: "var(--color-border)",
                         },
                         "&:hover fieldset": {
-                          borderColor: "var(--wagyu-gold)",
+                          borderColor: "var(--color-border-strong)",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "var(--color-primary)",
+                          boxShadow: "0 0 0 3px var(--color-primary-surface)",
                         },
                       },
                       "& .MuiInputLabel-root": {
-                        color: "var(--color-text-secondary)",
+                        color: "var(--color-text-muted)",
+                        "&.Mui-focused": {
+                          color: "var(--color-primary)",
+                        },
                       },
                     }}
                   />
 
                   {/* Error */}
                   {(formError || error) && (
-                    <Alert severity="error" sx={{ borderRadius: 2 }}>
+                    <Alert
+                      severity="error"
+                      sx={{
+                        borderRadius: 2,
+                        background: "var(--status-error-surface)",
+                        color: "var(--status-error)",
+                        border: "1px solid rgba(214, 104, 83, 0.25)",
+                      }}
+                    >
                       {formError || error}
                     </Alert>
                   )}
 
                   {/* Success */}
                   {txHash && (
-                    <Alert severity="success" sx={{ borderRadius: 2 }}>
+                    <Alert
+                      severity="success"
+                      sx={{
+                        borderRadius: 2,
+                        background: "var(--status-success-surface)",
+                        color: "var(--status-success)",
+                        border: "1px solid rgba(110, 191, 139, 0.25)",
+                      }}
+                    >
                       <a
                         href={getTxUrl(txHash)}
                         target="_blank"
@@ -295,10 +365,14 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                       disabled={isLoading}
                       sx={{
                         flex: 1,
-                        borderColor: "var(--glass-border)",
+                        borderColor: "var(--color-border-strong)",
                         color: "var(--color-text-secondary)",
+                        borderRadius: 2,
+                        py: 1.25,
                         "&:hover": {
-                          borderColor: "var(--color-text-secondary)",
+                          borderColor: "var(--color-primary)",
+                          color: "var(--color-primary)",
+                          background: "var(--color-primary-surface)",
                         },
                       }}
                     >
@@ -310,21 +384,27 @@ export function CreateListingForm({ onSuccess }: CreateListingFormProps) {
                       disabled={isLoading || !title || !amount}
                       sx={{
                         flex: 1,
-                        background: "linear-gradient(135deg, var(--wagyu-gold), var(--wagyu-gold-light))",
-                        color: "#000",
+                        background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-rich) 100%)",
+                        color: "var(--sumi-black)",
                         fontWeight: 600,
+                        borderRadius: 2,
+                        py: 1.25,
+                        boxShadow: "var(--shadow-subtle), var(--shadow-copper)",
                         "&:hover": {
-                          background: "linear-gradient(135deg, var(--wagyu-gold-light), var(--wagyu-gold))",
+                          background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-deep) 100%)",
+                          transform: "translateY(-2px)",
+                          boxShadow: "var(--shadow-medium), 0 0 40px var(--copper-glow)",
                         },
                         "&:disabled": {
-                          background: "rgba(255, 255, 255, 0.1)",
+                          background: "var(--color-surface-hover)",
                           color: "var(--color-text-muted)",
+                          boxShadow: "none",
                         },
                       }}
                     >
                       {isLoading ? (
                         <>
-                          <CircularProgress size={20} sx={{ mr: 1, color: "#000" }} />
+                          <CircularProgress size={20} sx={{ mr: 1, color: "var(--sumi-black)" }} />
                           {t.processing}
                         </>
                       ) : (
