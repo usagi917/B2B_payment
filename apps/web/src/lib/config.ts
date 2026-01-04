@@ -103,4 +103,5 @@ export const STATUS_LABELS: Record<string, { ja: string; en: string; color: stri
   open: { ja: "出品中", en: "Open", color: "success" },
   active: { ja: "進行中", en: "Active", color: "info" },
   completed: { ja: "完了", en: "Completed", color: "default" },
+  cancelled: { ja: "キャンセル", en: "Cancelled", color: "error" },
 };

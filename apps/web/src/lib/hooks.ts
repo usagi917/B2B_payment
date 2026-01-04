@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { type Address, type Hash } from "viem";
 import { createClient, createWallet, config, getChain, getMetaMaskProvider } from "./config";
 import { FACTORY_ABI, ESCROW_ABI, ERC20_ABI } from "./abi";
@@ -216,7 +216,7 @@ export function useListingSummaries() {
               title,
               description,
               imageURI,
-              status: status as "open" | "active" | "completed",
+              status: status as "open" | "active" | "completed" | "cancelled",
               progress: {
                 completed: Number(progress[0]),
                 total: Number(progress[1]),
@@ -389,7 +389,7 @@ export function useEscrowInfo(escrowAddress: Address | null) {
         title,
         description,
         imageURI,
-        status: status as "open" | "active" | "completed",
+        status: status as "open" | "active" | "completed" | "cancelled",
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch escrow info");
@@ -461,18 +461,38 @@ export function useMilestones(escrowAddress: Address | null, categoryType?: numb
   return { milestones, isLoading, error, refetch: fetchMilestones };
 }
 
+// Transaction step types for progress display
+export type TxStep =
+  | "idle"
+  | "checking"      // Checking balance/allowance
+  | "approving"     // Waiting for approve signature
+  | "approve-confirming"  // Waiting for approve confirmation
+  | "signing"       // Waiting for main tx signature
+  | "confirming"    // Waiting for main tx confirmation
+  | "success"
+  | "error";
+
 export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () => void) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<Hash | null>(null);
+  const [txStep, setTxStep] = useState<TxStep>("idle");
+
+  const resetState = useCallback(() => {
+    setIsLoading(false);
+    setError(null);
+    setTxHash(null);
+    setTxStep("idle");
+  }, []);
 
   const lock = useCallback(
-    async (totalAmount: bigint) => {
+    async (totalAmount: bigint, skipApprovalCheck = false) => {
       if (!escrowAddress) return;
 
       setIsLoading(true);
       setError(null);
       setTxHash(null);
+      setTxStep("checking");
 
       try {
         const wallet = createWallet();
@@ -481,21 +501,49 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
 
         const [account] = await wallet.getAddresses();
 
-        // First approve token
-        const hash1 = await wallet.writeContract({
+        // Check balance first
+        const balance = await client.readContract({
           address: config.tokenAddress,
           abi: ERC20_ABI,
-          functionName: "approve",
-          args: [escrowAddress, totalAmount],
-          account,
-        });
+          functionName: "balanceOf",
+          args: [account],
+        }) as bigint;
 
-        const approveReceipt = await client.waitForTransactionReceipt({ hash: hash1 });
-        if (approveReceipt.status !== "success") {
-          throw new Error("承認トランザクションが失敗しました");
+        if (balance < totalAmount) {
+          throw new Error("残高が不足しています");
+        }
+
+        // Check allowance and skip approve if already approved
+        let needsApproval = true;
+        if (!skipApprovalCheck) {
+          const currentAllowance = await client.readContract({
+            address: config.tokenAddress,
+            abi: ERC20_ABI,
+            functionName: "allowance",
+            args: [account, escrowAddress],
+          }) as bigint;
+          needsApproval = currentAllowance < totalAmount;
+        }
+
+        if (needsApproval) {
+          setTxStep("approving");
+          const hash1 = await wallet.writeContract({
+            address: config.tokenAddress,
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [escrowAddress, totalAmount],
+            account,
+          });
+
+          setTxStep("approve-confirming");
+          const approveReceipt = await client.waitForTransactionReceipt({ hash: hash1 });
+          if (approveReceipt.status !== "success") {
+            throw new Error("承認トランザクションが失敗しました");
+          }
         }
 
         // Then lock
+        setTxStep("signing");
         const hash2 = await wallet.writeContract({
           address: escrowAddress,
           abi: ESCROW_ABI,
@@ -504,13 +552,16 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
           account,
         });
 
+        setTxStep("confirming");
+        setTxHash(hash2);
         const lockReceipt = await client.waitForTransactionReceipt({ hash: hash2 });
         if (lockReceipt.status !== "success") {
           throw new Error("購入トランザクションが失敗しました");
         }
-        setTxHash(hash2);
+        setTxStep("success");
         onSuccess?.();
       } catch (err) {
+        setTxStep("error");
         setError(err instanceof Error ? err.message : "購入に失敗しました");
       } finally {
         setIsLoading(false);
@@ -520,12 +571,13 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
   );
 
   const submit = useCallback(
-    async (index: number) => {
+    async (index: number, evidenceHash?: string) => {
       if (!escrowAddress) return;
 
       setIsLoading(true);
       setError(null);
       setTxHash(null);
+      setTxStep("signing");
 
       try {
         const wallet = createWallet();
@@ -533,21 +585,30 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
         if (!wallet) throw new Error("Walletが接続されていません");
 
         const [account] = await wallet.getAddresses();
+
+        // V4: Pass evidenceHash (bytes32) - use 0x0 if not provided
+        const evidenceBytes32 = evidenceHash
+          ? (evidenceHash.startsWith("0x") ? evidenceHash : `0x${evidenceHash}`)
+          : "0x0000000000000000000000000000000000000000000000000000000000000000";
+
         const hash = await wallet.writeContract({
           address: escrowAddress,
           abi: ESCROW_ABI,
           functionName: "submit",
-          args: [BigInt(index)],
+          args: [BigInt(index), evidenceBytes32 as `0x${string}`],
           account,
         });
 
+        setTxStep("confirming");
+        setTxHash(hash);
         const receipt = await client.waitForTransactionReceipt({ hash });
         if (receipt.status !== "success") {
           throw new Error("完了報告トランザクションが失敗しました");
         }
-        setTxHash(hash);
+        setTxStep("success");
         onSuccess?.();
       } catch (err) {
+        setTxStep("error");
         setError(err instanceof Error ? err.message : "完了報告に失敗しました");
       } finally {
         setIsLoading(false);
@@ -556,7 +617,47 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
     [escrowAddress, onSuccess]
   );
 
-  return { lock, submit, isLoading, error, txHash };
+  // V5: Cancel function
+  const cancel = useCallback(async () => {
+    if (!escrowAddress) return;
+
+    setIsLoading(true);
+    setError(null);
+    setTxHash(null);
+    setTxStep("signing");
+
+    try {
+      const wallet = createWallet();
+      const client = createClient();
+      if (!wallet) throw new Error("Walletが接続されていません");
+
+      const [account] = await wallet.getAddresses();
+
+      const hash = await wallet.writeContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "cancel",
+        args: [],
+        account,
+      });
+
+      setTxStep("confirming");
+      setTxHash(hash);
+      const receipt = await client.waitForTransactionReceipt({ hash });
+      if (receipt.status !== "success") {
+        throw new Error("キャンセルトランザクションが失敗しました");
+      }
+      setTxStep("success");
+      onSuccess?.();
+    } catch (err) {
+      setTxStep("error");
+      setError(err instanceof Error ? err.message : "キャンセルに失敗しました");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [escrowAddress, onSuccess]);
+
+  return { lock, submit, cancel, isLoading, error, txHash, txStep, resetState };
 }
 
 export function useEscrowEvents(escrowAddress: Address | null) {
@@ -761,6 +862,169 @@ export function useTokenBalance(address: Address | null) {
   }, [fetchBalance]);
 
   return { balance, isLoading, refetch: fetchBalance };
+}
+
+export function useTokenAllowance(owner: Address | null, spender: Address | null) {
+  const [allowance, setAllowance] = useState<bigint>(0n);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchAllowance = useCallback(async () => {
+    if (!owner || !spender || !config.tokenAddress) {
+      setAllowance(0n);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const client = createClient();
+      const result = await client.readContract({
+        address: config.tokenAddress,
+        abi: ERC20_ABI,
+        functionName: "allowance",
+        args: [owner, spender],
+      });
+      setAllowance(result as bigint);
+    } catch {
+      setAllowance(0n);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [owner, spender]);
+
+  useEffect(() => {
+    fetchAllowance();
+  }, [fetchAllowance]);
+
+  return { allowance, isLoading, refetch: fetchAllowance };
+}
+
+// Pre-purchase validation hook
+export function usePurchaseValidation(
+  userAddress: Address | null,
+  escrowAddress: Address | null,
+  totalAmount: bigint
+) {
+  const { balance, refetch: refetchBalance } = useTokenBalance(userAddress);
+  const { allowance, refetch: refetchAllowance } = useTokenAllowance(userAddress, escrowAddress);
+
+  const hasEnoughBalance = balance >= totalAmount;
+  const hasEnoughAllowance = allowance >= totalAmount;
+  const needsApproval = !hasEnoughAllowance;
+
+  const refetch = useCallback(() => {
+    refetchBalance();
+    refetchAllowance();
+  }, [refetchBalance, refetchAllowance]);
+
+  return {
+    balance,
+    allowance,
+    hasEnoughBalance,
+    hasEnoughAllowance,
+    needsApproval,
+    refetch,
+  };
+}
+
+// ============ Real-time Updates ============
+
+export function useRealtimeEscrow(
+  escrowAddress: Address | null,
+  options: { interval?: number; enabled?: boolean } = {}
+) {
+  const { interval = 10000, enabled = true } = options;
+
+  const { info, isLoading: infoLoading, error: infoError, refetch: refetchInfo } = useEscrowInfo(escrowAddress);
+  const { milestones, isLoading: milestonesLoading, refetch: refetchMilestones } = useMilestones(escrowAddress);
+  const { events, refetch: refetchEvents } = useEscrowEvents(escrowAddress);
+
+  const refetchAll = useCallback(() => {
+    refetchInfo();
+    refetchMilestones();
+    refetchEvents();
+  }, [refetchInfo, refetchMilestones, refetchEvents]);
+
+  useEffect(() => {
+    if (!escrowAddress || !enabled) return;
+
+    const timer = setInterval(() => {
+      refetchAll();
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [escrowAddress, interval, enabled, refetchAll]);
+
+  return {
+    info,
+    milestones,
+    events,
+    isLoading: infoLoading || milestonesLoading,
+    error: infoError,
+    refetch: refetchAll,
+  };
+}
+
+// Real-time listing summaries with polling
+export function useRealtimeListingSummaries(options: { interval?: number; enabled?: boolean } = {}) {
+  const { interval = 15000, enabled = true } = options;
+  const { summaries, isLoading, error, refetch } = useListingSummaries();
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const timer = setInterval(() => {
+      refetch();
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [interval, enabled, refetch]);
+
+  return { summaries, isLoading, error, refetch };
+}
+
+// ============ My Page Hooks ============
+
+export function useMyListings(address: Address | null) {
+  const { summaries, isLoading, error, refetch } = useListingSummaries();
+
+  const myListings = useMemo(() => {
+    if (!address) return { asProducer: [], asBuyer: [] };
+    const lower = address.toLowerCase();
+    return {
+      asProducer: summaries.filter((s) => s.producer.toLowerCase() === lower),
+      asBuyer: summaries.filter(
+        (s) => s.buyer.toLowerCase() === lower && s.buyer !== "0x0000000000000000000000000000000000000000"
+      ),
+    };
+  }, [summaries, address]);
+
+  const stats = useMemo(() => {
+    const producer = myListings.asProducer;
+    const buyer = myListings.asBuyer;
+
+    return {
+      totalProduced: producer.length,
+      producerOpen: producer.filter((s) => s.status === "open").length,
+      producerActive: producer.filter((s) => s.status === "active").length,
+      producerCompleted: producer.filter((s) => s.status === "completed").length,
+      totalBought: buyer.length,
+      buyerActive: buyer.filter((s) => s.status === "active").length,
+      buyerCompleted: buyer.filter((s) => s.status === "completed").length,
+      totalEarned: producer
+        .filter((s) => s.status !== "open")
+        .reduce((sum, s) => sum + s.releasedAmount, 0n),
+      totalSpent: buyer.reduce((sum, s) => sum + s.totalAmount, 0n),
+    };
+  }, [myListings]);
+
+  return {
+    asProducer: myListings.asProducer,
+    asBuyer: myListings.asBuyer,
+    stats,
+    isLoading,
+    error,
+    refetch,
+  };
 }
 
 // ============ Utility Functions ============

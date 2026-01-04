@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { AppBar, Toolbar, Box, Typography, ToggleButtonGroup, ToggleButton, Container } from "@mui/material";
+import { AppBar, Toolbar, Box, Typography, ToggleButtonGroup, ToggleButton, Container, Button } from "@mui/material";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { useI18n, type Locale } from "@/lib/i18n";
 
 interface HeaderProps {
@@ -82,13 +84,40 @@ export function Header({ onLocaleChange }: HeaderProps) {
             </Box>
           </motion.div>
 
-          {/* Language Switcher */}
+          {/* Right side: My Page + Language Switcher */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
           >
-            <ToggleButtonGroup
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {/* My Page Link */}
+              <Link href="/my" style={{ textDecoration: 'none' }}>
+                <Button
+                  size="small"
+                  startIcon={<AccountCircleIcon />}
+                  sx={{
+                    color: 'var(--color-text-secondary)',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    letterSpacing: '0.05em',
+                    px: 1.5,
+                    py: 0.75,
+                    borderRadius: 2,
+                    border: '1px solid transparent',
+                    '&:hover': {
+                      color: 'var(--color-primary)',
+                      background: 'rgba(212, 165, 116, 0.08)',
+                      borderColor: 'var(--color-border-accent)',
+                    },
+                  }}
+                >
+                  {locale === 'ja' ? 'マイページ' : 'My Page'}
+                </Button>
+              </Link>
+
+              {/* Language Switcher */}
+              <ToggleButtonGroup
               value={locale}
               exclusive
               onChange={(_, newLocale) => newLocale && onLocaleChange(newLocale)}
@@ -129,6 +158,7 @@ export function Header({ onLocaleChange }: HeaderProps) {
               <ToggleButton value="ja">JP</ToggleButton>
               <ToggleButton value="en">EN</ToggleButton>
             </ToggleButtonGroup>
+            </Box>
           </motion.div>
         </Toolbar>
       </Container>

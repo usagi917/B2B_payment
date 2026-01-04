@@ -10,6 +10,19 @@ interface Milestone {
   completed: boolean;
 }
 
+// Milestone names by category type (same as hooks.ts)
+const MILESTONE_NAMES: Record<number, string[]> = {
+  0: ["素牛導入", "肥育開始", "肥育中1", "肥育中2", "肥育中3", "肥育中4", "肥育中5", "肥育中6", "出荷準備", "出荷", "納品完了"],
+  1: ["仕込み", "発酵", "熟成", "瓶詰め", "出荷"],
+  2: ["制作開始", "窯焼き", "絵付け", "仕上げ"],
+  3: ["完了"],
+};
+
+function getMilestoneName(categoryType: number, index: number): string {
+  const names = MILESTONE_NAMES[categoryType] || MILESTONE_NAMES[3];
+  return names[index] || `Step ${index + 1}`;
+}
+
 const resolveChain = () => {
   const chainId = Number(
     process.env.NEXT_PUBLIC_CHAIN_ID || process.env.CHAIN_ID || polygonAmoy.id
@@ -74,25 +87,23 @@ function generateSVG(
   const safeTotalAmount = escapeSvgText(totalAmount);
   const safeSymbol = escapeSvgText(symbol);
 
-  // Generate milestone indicators
-  const milestonesPerRow = 6;
+  // Generate milestone indicators (vertical list for better readability)
   const milestoneIndicators = milestones
     .map((m, i) => {
-      const x = 40 + (i % milestonesPerRow) * 55;
-      const y = 320 + Math.floor(i / milestonesPerRow) * 60;
-
+      const y = 320 + i * 32;
       const fillColor = m.completed ? successColor : pendingColor;
       const icon = m.completed ? "✓" : "○";
 
-      // Truncate name if too long
-      const displayName = m.name.length > 4 ? m.name.slice(0, 4) : m.name;
+      // Display full name (truncate to 8 chars for very long names)
+      const displayName = m.name.length > 8 ? m.name.slice(0, 7) + "…" : m.name;
       const safeDisplayName = escapeSvgText(displayName);
 
       return `
-        <g transform="translate(${x}, ${y})">
-          <rect x="0" y="0" width="50" height="45" rx="8" fill="${fillColor}20" stroke="${fillColor}" stroke-width="2"/>
-          <text x="25" y="18" font-size="10" fill="${textColor}" text-anchor="middle">${safeDisplayName}</text>
-          <text x="25" y="36" font-size="14" fill="${fillColor}" text-anchor="middle">${icon}</text>
+        <g transform="translate(40, ${y})">
+          <circle cx="10" cy="10" r="10" fill="${fillColor}30" stroke="${fillColor}" stroke-width="2"/>
+          <text x="10" y="14" font-size="10" fill="${fillColor}" text-anchor="middle" font-weight="bold">${icon}</text>
+          <text x="28" y="14" font-size="11" fill="${m.completed ? textColor : mutedColor}" font-family="Arial, sans-serif">${safeDisplayName}</text>
+          <text x="360" y="14" font-size="10" fill="${mutedColor}" text-anchor="end" font-family="Arial, sans-serif">${(Number(m.bps) / 100).toFixed(0)}%</text>
         </g>
       `;
     })
@@ -102,9 +113,8 @@ function generateSVG(
   const progressBarWidth = 320;
   const progressFill = (progressPercent / 100) * progressBarWidth;
 
-  // Milestone rows count
-  const milestoneRows = Math.ceil(milestones.length / milestonesPerRow);
-  const svgHeight = 380 + milestoneRows * 60;
+  // Calculate SVG height based on milestone count
+  const svgHeight = 360 + milestones.length * 32;
 
   const svg = `
 <svg width="400" height="${svgHeight}" viewBox="0 0 400 ${svgHeight}" xmlns="http://www.w3.org/2000/svg">
@@ -222,7 +232,7 @@ export async function GET(
     }
 
     // Get escrow info (split into core and meta)
-    const [core, meta, milestonesResult] = await Promise.all([
+    const [core, meta, milestonesResult, categoryType] = await Promise.all([
       client.readContract({
         address: escrowAddress,
         abi: ESCROW_ABI,
@@ -238,17 +248,23 @@ export async function GET(
         abi: ESCROW_ABI,
         functionName: "getMilestones",
       }),
+      client.readContract({
+        address: escrowAddress,
+        abi: ESCROW_ABI,
+        functionName: "categoryType",
+      }),
     ]) as readonly [
       readonly [Address, Address, Address, Address, bigint, bigint, bigint, boolean],
       readonly [string, string, string, string, string],
-      ReadonlyArray<{ bps: bigint | number; completed: boolean }>
+      ReadonlyArray<{ bps: bigint | number; completed: boolean }>,
+      number
     ];
 
     const [, tokenAddress, , , , totalAmount, releasedAmount] = core;
     const [category, title, , , status] = meta;
 
     const milestones: Milestone[] = milestonesResult.map((m, index) => ({
-      name: `Step ${index + 1}`,
+      name: getMilestoneName(categoryType, index),
       bps: m.bps,
       completed: m.completed,
     }));

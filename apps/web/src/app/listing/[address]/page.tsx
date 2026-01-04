@@ -21,8 +21,10 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import LockIcon from "@mui/icons-material/Lock";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import SendIcon from "@mui/icons-material/Send";
-import { Header, HeroNFT, ConnectWallet } from "@/components";
+import CancelIcon from "@mui/icons-material/Cancel";
+import { Header, HeroNFT, ConnectWallet, TxProgress } from "@/components";
 import {
   useWallet,
   useEscrowInfo,
@@ -30,6 +32,7 @@ import {
   useEscrowActions,
   useEscrowEvents,
   useTokenInfo,
+  usePurchaseValidation,
   formatAmount,
   getUserRole,
   shortenAddress,
@@ -59,13 +62,21 @@ export default function ListingDetailPage() {
   const { events, refetch: refetchEvents } = useEscrowEvents(escrowAddress);
   const { symbol, decimals } = useTokenInfo();
 
+  // Purchase validation (balance/allowance check)
+  const purchaseValidation = usePurchaseValidation(
+    wallet.address,
+    escrowAddress,
+    info?.totalAmount ?? 0n
+  );
+
   const handleSuccess = useCallback(() => {
     refetchInfo();
     refetchMilestones();
     refetchEvents();
-  }, [refetchInfo, refetchMilestones, refetchEvents]);
+    purchaseValidation.refetch();
+  }, [refetchInfo, refetchMilestones, refetchEvents, purchaseValidation]);
 
-  const { lock, submit, isLoading: actionLoading, error: actionError, txHash } = useEscrowActions(
+  const { lock, submit, cancel, isLoading: actionLoading, error: actionError, txHash, txStep, resetState } = useEscrowActions(
     escrowAddress,
     handleSuccess
   );
@@ -415,35 +426,116 @@ export default function ListingDetailPage() {
                             {locale === "ja" ? "アクション" : "Actions"}
                           </Typography>
 
-                          {/* Error */}
-                          {actionError && (
-                            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-                              {actionError}
-                            </Alert>
-                          )}
+                          {/* Transaction Progress */}
+                          <TxProgress
+                            step={txStep}
+                            txHash={txHash}
+                            error={actionError}
+                            onClose={resetState}
+                          />
 
-                          {/* Success */}
-                          {txHash && (
-                            <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
-                              <a
-                                href={getTxUrl(txHash)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ color: "inherit" }}
+                          {/* Balance/Allowance Info (for potential buyers) */}
+                          {info.status === "open" && userRole !== "producer" && (
+                            <Box sx={{ mb: 2 }}>
+                              {/* Balance Display */}
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  p: 1.5,
+                                  mb: 1,
+                                  borderRadius: 2,
+                                  background: purchaseValidation.hasEnoughBalance
+                                    ? "var(--status-success-surface)"
+                                    : "var(--status-error-surface)",
+                                  border: `1px solid ${
+                                    purchaseValidation.hasEnoughBalance
+                                      ? "rgba(110, 191, 139, 0.25)"
+                                      : "rgba(214, 104, 83, 0.25)"
+                                  }`,
+                                }}
                               >
-                                {locale === "ja" ? "トランザクションを確認" : "View Transaction"}
-                              </a>
-                            </Alert>
+                                <Typography variant="body2" sx={{ color: "var(--color-text-secondary)" }}>
+                                  {locale === "ja" ? "残高" : "Balance"}
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 600,
+                                    color: purchaseValidation.hasEnoughBalance
+                                      ? "var(--status-success)"
+                                      : "var(--status-error)",
+                                  }}
+                                >
+                                  {formatAmount(purchaseValidation.balance, decimals, symbol)}
+                                </Typography>
+                              </Box>
+
+                              {/* Allowance Status */}
+                              {purchaseValidation.hasEnoughBalance && (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    background: "rgba(247, 243, 235, 0.02)",
+                                    border: "1px solid var(--color-border)",
+                                  }}
+                                >
+                                  <Typography variant="body2" sx={{ color: "var(--color-text-secondary)" }}>
+                                    {locale === "ja" ? "承認状況" : "Approval"}
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      fontWeight: 500,
+                                      color: purchaseValidation.hasEnoughAllowance
+                                        ? "var(--status-success)"
+                                        : "var(--color-text-muted)",
+                                    }}
+                                  >
+                                    {purchaseValidation.hasEnoughAllowance
+                                      ? locale === "ja"
+                                        ? "承認済み"
+                                        : "Approved"
+                                      : locale === "ja"
+                                      ? "承認が必要"
+                                      : "Needs Approval"}
+                                  </Typography>
+                                </Box>
+                              )}
+
+                              {/* Insufficient Balance Warning */}
+                              {!purchaseValidation.hasEnoughBalance && (
+                                <Alert
+                                  severity="warning"
+                                  sx={{
+                                    mt: 1,
+                                    borderRadius: 2,
+                                    background: "var(--status-warning-surface)",
+                                    color: "var(--status-warning)",
+                                    border: "1px solid rgba(232, 197, 71, 0.25)",
+                                  }}
+                                >
+                                  {locale === "ja"
+                                    ? `残高が${formatAmount(info.totalAmount - purchaseValidation.balance, decimals, symbol)}不足しています`
+                                    : `Insufficient balance by ${formatAmount(info.totalAmount - purchaseValidation.balance, decimals, symbol)}`}
+                                </Alert>
+                              )}
+                            </Box>
                           )}
 
                           {/* Lock Button (for non-producer, when open) */}
-                          {info.status === "open" && userRole !== "producer" && (
+                          {info.status === "open" && userRole !== "producer" && txStep !== "success" && (
                             <Button
                               variant="contained"
                               fullWidth
                               startIcon={actionLoading ? <CircularProgress size={20} /> : <LockIcon />}
                               onClick={handleLock}
-                              disabled={actionLoading}
+                              disabled={actionLoading || !purchaseValidation.hasEnoughBalance}
                               sx={{
                                 background: "linear-gradient(135deg, var(--color-primary) 0%, var(--copper-rich) 100%)",
                                 color: "var(--sumi-black)",
@@ -456,27 +548,68 @@ export default function ListingDetailPage() {
                                   transform: "translateY(-2px)",
                                   boxShadow: "var(--shadow-medium), 0 0 40px var(--copper-glow)",
                                 },
+                                "&:disabled": {
+                                  background: "var(--color-surface-hover)",
+                                  color: "var(--color-text-muted)",
+                                  boxShadow: "none",
+                                },
                               }}
                             >
                               {actionLoading
                                 ? locale === "ja"
                                   ? "処理中..."
                                   : "Processing..."
+                                : purchaseValidation.needsApproval
+                                ? locale === "ja"
+                                  ? `承認して購入 (${formatAmount(info.totalAmount, decimals, symbol)})`
+                                  : `Approve & Purchase (${formatAmount(info.totalAmount, decimals, symbol)})`
                                 : locale === "ja"
                                 ? `購入する (${formatAmount(info.totalAmount, decimals, symbol)})`
                                 : `Purchase (${formatAmount(info.totalAmount, decimals, symbol)})`}
                             </Button>
                           )}
 
-                          {/* Producer's own listing message */}
-                          {info.status === "open" && userRole === "producer" && (
-                            <Typography sx={{ color: "var(--color-text-muted)", textAlign: "center" }}>
-                              {locale === "ja" ? "購入者を待っています..." : "Waiting for buyer..."}
-                            </Typography>
+                          {/* Producer's own listing - waiting message + cancel button */}
+                          {info.status === "open" && userRole === "producer" && txStep !== "success" && (
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                              <Typography sx={{ color: "var(--color-text-muted)", textAlign: "center" }}>
+                                {locale === "ja" ? "購入者を待っています..." : "Waiting for buyer..."}
+                              </Typography>
+                              <Button
+                                variant="outlined"
+                                fullWidth
+                                startIcon={actionLoading ? <CircularProgress size={20} /> : <CancelIcon />}
+                                onClick={cancel}
+                                disabled={actionLoading}
+                                sx={{
+                                  borderColor: "var(--status-error)",
+                                  color: "var(--status-error)",
+                                  "&:hover": {
+                                    borderColor: "var(--status-error)",
+                                    background: "var(--status-error-surface)",
+                                  },
+                                }}
+                              >
+                                {actionLoading
+                                  ? locale === "ja"
+                                    ? "処理中..."
+                                    : "Processing..."
+                                  : locale === "ja"
+                                  ? "出品をキャンセル"
+                                  : "Cancel Listing"}
+                              </Button>
+                            </Box>
+                          )}
+
+                          {/* Loading state while milestones refresh */}
+                          {info.status === "active" && userRole === "producer" && milestonesLoading && txStep === "idle" && (
+                            <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                              <CircularProgress size={24} sx={{ color: "var(--color-primary)" }} />
+                            </Box>
                           )}
 
                           {/* Submit Button (for producer, when active) */}
-                          {info.status === "active" && userRole === "producer" && nextMilestoneIndex >= 0 && (
+                          {info.status === "active" && userRole === "producer" && nextMilestoneIndex >= 0 && txStep !== "success" && !milestonesLoading && (
                             <Button
                               variant="contained"
                               fullWidth
@@ -518,6 +651,16 @@ export default function ListingDetailPage() {
                               <CheckCircleIcon sx={{ fontSize: 48, color: "var(--status-success)", mb: 1 }} />
                               <Typography sx={{ color: "var(--color-text)" }}>
                                 {locale === "ja" ? "全工程完了" : "All milestones completed"}
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {/* Cancelled message */}
+                          {info.status === "cancelled" && (
+                            <Box sx={{ textAlign: "center", py: 2 }}>
+                              <CancelIcon sx={{ fontSize: 48, color: "var(--status-error)", mb: 1 }} />
+                              <Typography sx={{ color: "var(--color-text)" }}>
+                                {locale === "ja" ? "この出品はキャンセルされました" : "This listing has been cancelled"}
                               </Typography>
                             </Box>
                           )}
@@ -592,6 +735,7 @@ export default function ListingDetailPage() {
                           {milestones.map((milestone, index) => {
                             const amount = milestoneAmounts[index] ?? 0n;
                             const isNext = index === nextMilestoneIndex && info.status === "active";
+                            const isFuture = !milestone.completed && index > nextMilestoneIndex && info.status === "active";
 
                             return (
                               <motion.div
@@ -613,12 +757,15 @@ export default function ListingDetailPage() {
                                       ? "var(--status-success-surface)"
                                       : "transparent",
                                     border: isNext ? "1px solid var(--color-border-accent)" : "1px solid transparent",
+                                    opacity: isFuture ? 0.6 : 1,
                                   }}
                                 >
                                   {/* Icon */}
                                   <Box sx={{ pt: 0.5 }}>
                                     {milestone.completed ? (
                                       <CheckCircleIcon sx={{ color: "var(--status-success)" }} />
+                                    ) : isFuture ? (
+                                      <LockOutlinedIcon sx={{ color: "var(--color-text-muted)", fontSize: "1.25rem" }} />
                                     ) : (
                                       <RadioButtonUncheckedIcon
                                         sx={{ color: isNext ? "var(--color-primary)" : "var(--color-text-muted)" }}
@@ -628,19 +775,32 @@ export default function ListingDetailPage() {
 
                                   {/* Content */}
                                   <Box sx={{ flex: 1 }}>
-                                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                                      <Typography
-                                        sx={{
-                                          fontWeight: 600,
-                                          color: milestone.completed
-                                            ? "var(--color-text)"
-                                            : isNext
-                                            ? "var(--color-primary)"
-                                            : "var(--color-text-secondary)",
-                                        }}
-                                      >
-                                        {milestone.name}
-                                      </Typography>
+                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <Typography
+                                          sx={{
+                                            fontWeight: 600,
+                                            color: milestone.completed
+                                              ? "var(--color-text)"
+                                              : isNext
+                                              ? "var(--color-primary)"
+                                              : "var(--color-text-secondary)",
+                                          }}
+                                        >
+                                          {milestone.name}
+                                        </Typography>
+                                        {isFuture && (
+                                          <Typography
+                                            variant="caption"
+                                            sx={{
+                                              color: "var(--color-text-muted)",
+                                              fontSize: "0.7rem",
+                                            }}
+                                          >
+                                            {locale === "ja" ? "順番待ち" : "Waiting"}
+                                          </Typography>
+                                        )}
+                                      </Box>
                                       <Typography
                                         sx={{
                                           color: milestone.completed

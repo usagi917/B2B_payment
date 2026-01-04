@@ -90,7 +90,7 @@ export const FACTORY_ABI = [
   },
 ] as const;
 
-// MilestoneEscrowV2 ABI (per-listing escrow)
+// MilestoneEscrowV5 ABI (per-listing escrow with cancel support)
 export const ESCROW_ABI = [
   // Events
   {
@@ -107,7 +107,14 @@ export const ESCROW_ABI = [
     inputs: [
       { name: "index", type: "uint256", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
+      { name: "evidenceHash", type: "bytes32", indexed: false },
     ],
+  },
+  // V5: Cancelled event
+  {
+    type: "event",
+    name: "Cancelled",
+    inputs: [],
   },
   // Read functions
   {
@@ -162,6 +169,14 @@ export const ESCROW_ABI = [
   {
     type: "function",
     name: "locked",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  // V5: cancelled state
+  {
+    type: "function",
+    name: "cancelled",
     inputs: [],
     outputs: [{ name: "", type: "bool" }],
     stateMutability: "view",
@@ -288,12 +303,37 @@ export const ESCROW_ABI = [
     outputs: [],
     stateMutability: "nonpayable",
   },
+  // V5: cancel function
+  {
+    type: "function",
+    name: "cancel",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
   {
     type: "function",
     name: "submit",
-    inputs: [{ name: "index", type: "uint256" }],
+    inputs: [
+      { name: "index", type: "uint256" },
+      { name: "evidenceHash", type: "bytes32" },
+    ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getEvidenceHash",
+    inputs: [{ name: "index", type: "uint256" }],
+    outputs: [{ name: "", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "evidenceHashes",
+    inputs: [{ name: "index", type: "uint256" }],
+    outputs: [{ name: "", type: "bytes32" }],
+    stateMutability: "view",
   },
 ] as const;
 

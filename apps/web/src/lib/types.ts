@@ -22,7 +22,7 @@ export interface EscrowInfo {
   title: string;
   description: string;
   imageURI: string;
-  status: "open" | "active" | "completed";
+  status: "open" | "active" | "completed" | "cancelled";
 }
 
 // v2: Listing summary (for list display)
@@ -38,7 +38,7 @@ export interface ListingSummary {
   title: string;
   description: string;
   imageURI: string;
-  status: "open" | "active" | "completed";
+  status: "open" | "active" | "completed" | "cancelled";
   progress: {
     completed: number;
     total: number;
