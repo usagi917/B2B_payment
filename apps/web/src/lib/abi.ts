@@ -90,7 +90,7 @@ export const FACTORY_ABI = [
   },
 ] as const;
 
-// MilestoneEscrowV2 ABI (per-listing escrow)
+// MilestoneEscrowV4 ABI (per-listing escrow with evidence hash)
 export const ESCROW_ABI = [
   // Events
   {
@@ -107,6 +107,7 @@ export const ESCROW_ABI = [
     inputs: [
       { name: "index", type: "uint256", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
+      { name: "evidenceHash", type: "bytes32", indexed: false },
     ],
   },
   // Read functions
@@ -291,9 +292,26 @@ export const ESCROW_ABI = [
   {
     type: "function",
     name: "submit",
-    inputs: [{ name: "index", type: "uint256" }],
+    inputs: [
+      { name: "index", type: "uint256" },
+      { name: "evidenceHash", type: "bytes32" },
+    ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getEvidenceHash",
+    inputs: [{ name: "index", type: "uint256" }],
+    outputs: [{ name: "", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "evidenceHashes",
+    inputs: [{ name: "index", type: "uint256" }],
+    outputs: [{ name: "", type: "bytes32" }],
+    stateMutability: "view",
   },
 ] as const;
 

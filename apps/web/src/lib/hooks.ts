@@ -586,13 +586,16 @@ export function useEscrowActions(escrowAddress: Address | null, onSuccess?: () =
 
         const [account] = await wallet.getAddresses();
 
-        // Note: evidenceHash will be used after contract upgrade
-        // For now, just submit without it
+        // V4: Pass evidenceHash (bytes32) - use 0x0 if not provided
+        const evidenceBytes32 = evidenceHash
+          ? (evidenceHash.startsWith("0x") ? evidenceHash : `0x${evidenceHash}`)
+          : "0x0000000000000000000000000000000000000000000000000000000000000000";
+
         const hash = await wallet.writeContract({
           address: escrowAddress,
           abi: ESCROW_ABI,
           functionName: "submit",
-          args: [BigInt(index)],
+          args: [BigInt(index), evidenceBytes32 as `0x${string}`],
           account,
         });
 
